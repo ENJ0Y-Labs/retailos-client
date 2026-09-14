@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0b0b0b;
+  color: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 0.75rem;
+  background: #101010;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  outline: none;
+}
+
+.field::placeholder {
+  color: rgb(255 255 255 / 0.3);
+}
+
+.field:focus {
+  border-color: rgb(249 115 22 / 0.75);
+  box-shadow: 0 0 0 3px rgb(249 115 22 / 0.1);
+}
+
+.field option {
+  background: #151515;
+  color: #ffffff;
+}
