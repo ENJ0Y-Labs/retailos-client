@@ -1,11 +1,1 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/employee-dashboard/page": "app/employee-dashboard/page.js",
-  "/inventory/page": "app/inventory/page.js",
-  "/items/page": "app/items/page.js",
-  "/login/page": "app/login/page.js",
-  "/manager-dashboard/page": "app/manager-dashboard/page.js",
-  "/page": "app/page.js",
-  "/sales/page": "app/sales/page.js",
-  "/settings/page": "app/settings/page.js"
-}
+{}
