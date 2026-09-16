@@ -33,8 +33,14 @@ export default function DashboardShell({
   title: string;
 }) {
   const pathname = usePathname();
-  const items = allItems.filter(([, , roles]) => roles.includes(role));
   const dashboardHref = `/${role}-dashboard`;
+  const items = allItems
+    .filter(([, , roles]) => roles.includes(role))
+    .map(([label, href, roles]) => [
+      label,
+      label === "Dashboard" ? dashboardHref : href,
+      roles,
+    ] as NavItem);
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white lg:flex">
