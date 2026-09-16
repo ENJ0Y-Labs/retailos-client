@@ -17,10 +17,16 @@ npm install
 - `SETUP_KEY`
 - `DATABASE_SSL` (`true` by default)
 
-3. Run the SQL schema against the PostgreSQL database:
+3. Initialize PostgreSQL:
 
 ```bash
 psql "$DATABASE_URL" -f db/schema.sql
+```
+
+Optional demo products:
+
+```bash
+psql "$DATABASE_URL" -f db/seed.sql
 ```
 
 4. Start the app:
@@ -44,7 +50,18 @@ Example body:
 
 ## Backend
 
-The application includes session authentication, role-based authorization, PostgreSQL-backed users/products/sales/purchases/notifications/audit logs, transactional stock updates, reporting, and secure first-admin setup.
+The application includes session authentication, role-based authorization, PostgreSQL-backed users/products/sales/purchases/notifications/audit logs, transactional stock updates, reporting, live dashboard statistics, and secure first-admin setup.
+
+### Connected UI
+
+- Inventory: product create, edit, delete, stock snapshot and low-stock indicators
+- Sales/POS: live products, cart quantities, payment method and completed sales
+- Purchases: purchase submission, history and approval/stock updates
+- Transactions: search/filter, live history and sale cancellation
+- Users: admin creation, role changes and activation/deactivation
+- Reports: live sales, profit, payment, top-item, staff and seven-day trend data
+- Notifications: live notification list and read/mark-all-read actions
+- Dashboards: live sales, transaction, product, stock, low-stock, transaction and activity data
 
 ### Roles
 
@@ -52,11 +69,16 @@ The application includes session authentication, role-based authorization, Postg
 - `MANAGER`: inventory, purchases, reports and operations
 - `EMPLOYEE`: selling, product browsing and transactions
 
-### Production build
+## Production build
+
+Before deployment, pull the latest `main`, install dependencies, and run:
 
 ```bash
+npm install
 npm run build
 npm start
 ```
+
+If the build succeeds, configure the same production environment variables on the hosting platform and initialize the production database with `db/schema.sql`.
 
 Never commit `.env.local` or production credentials.
