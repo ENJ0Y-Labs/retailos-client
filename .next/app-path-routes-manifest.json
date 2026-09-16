@@ -1,0 +1,18 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/admin-dashboard/page": "/admin-dashboard",
+  "/employee-dashboard/page": "/employee-dashboard",
+  "/inventory/page": "/inventory",
+  "/items/page": "/items",
+  "/login/page": "/login",
+  "/manager-dashboard/page": "/manager-dashboard",
+  "/notification/page": "/notification",
+  "/page": "/",
+  "/purchases/page": "/purchases",
+  "/report/page": "/report",
+  "/sales/page": "/sales",
+  "/settings/page": "/settings",
+  "/transactions/page": "/transactions",
+  "/users/page": "/users"
+}

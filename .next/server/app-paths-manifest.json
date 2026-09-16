@@ -1,0 +1,18 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin-dashboard/page": "app/admin-dashboard/page.js",
+  "/employee-dashboard/page": "app/employee-dashboard/page.js",
+  "/inventory/page": "app/inventory/page.js",
+  "/items/page": "app/items/page.js",
+  "/login/page": "app/login/page.js",
+  "/manager-dashboard/page": "app/manager-dashboard/page.js",
+  "/notification/page": "app/notification/page.js",
+  "/page": "app/page.js",
+  "/purchases/page": "app/purchases/page.js",
+  "/report/page": "app/report/page.js",
+  "/sales/page": "app/sales/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/transactions/page": "app/transactions/page.js",
+  "/users/page": "app/users/page.js"
+}
