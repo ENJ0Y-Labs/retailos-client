@@ -1,9 +1,86 @@
 "use client";
-import {useEffect,useState} from "react";
-import {api} from "@/lib/api";
-type Alert={id:number;type:string;message:string;product_id:number|null;created_at:string};
-export default function AlertsPage(){const[alerts,setAlerts]=useState<Alert[]>([]);const[storeId,setStoreId]=useState<number|null>(null);const[message,setMessage]=useState("");const[loading,setLoading]=useState(true);
-async function load(){setLoading(true);try{const{user}=await api<{user:{store_id:number|null}}>("/auth/me");if(!user.store_id)throw new Error("No store is associated with this account");setStoreId(user.store_id);const d=await api<{alerts:Alert[]}>(`/alerts?store_id=${user.store_id}`);setAlerts(d.alerts)}catch(e){setMessage(e instanceof Error?e.message:"Unable to load alerts")}finally{setLoading(false)}}useEffect(()=>{load()},[]);
-async function generate(){if(!storeId)return;try{await api(`/alerts/generate-low-stock?store_id=${storeId}`,{method:"POST"});setMessage("Low-stock alerts refreshed.");load()}catch(e){setMessage(e instanceof Error?e.message:"Unable to generate alerts")}}
-async function resolve(id:number){if(!storeId)return;try{await api(`/alerts/resolve?store_id=${storeId}&id=${id}`,{method:"POST"});setMessage("Alert resolved.");load()}catch(e){setMessage(e instanceof Error?e.message:"Unable to resolve alert")}}
-return <main className="min-h-screen bg-[#0b0b0b] p-5 text-white md:p-8"><div className="mx-auto max-w-5xl"><div className="flex items-center justify-between"><h1 className="text-2xl font-semibold">Alerts</h1><button onClick={generate} className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Refresh low stock</button></div>{message&&<p className="mt-4 rounded-xl bg-white/5 p-3 text-sm text-orange-300">{message}</p>}<div className="mt-6 space-y-3">{loading?<p className="py-12 text-center text-white/30">Loading...</p>:alerts.map(a=><article key={a.id} className="rounded-2xl border border-white/10 bg-[#151515] p-5"><div className="flex items-start justify-between gap-4"><div><p className="text-xs uppercase text-orange-400">{a.type}</p><p className="mt-2">{a.message}</p><p className="mt-2 text-xs text-white/30">{new Date(a.created_at).toLocaleString()}</p></div><button onClick={()=>resolve(a.id)} className="text-sm text-green-400">Resolve</button></div></article>)}{!loading&&!alerts.length&&<div className="rounded-2xl border border-white/10 bg-[#151515] p-10 text-center text-white/30">No open alerts.</div>}</div></div></main>}
+
+import { useEffect, useState } from "react";
+import DashboardShell from "@/components/layout/DashboardShell";
+import { api } from "@/lib/api";
+import type { Alert } from "@/lib/types";
+
+export default function AlertsPage() {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [storeId, setStoreId] = useState<number | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function load() {
+    try {
+      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
+      if (!me.user.store_id) throw new Error("No store is associated with this account");
+      setStoreId(me.user.store_id);
+      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + me.user.store_id);
+      setAlerts(data.alerts);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load alerts");
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function generate() {
+    if (!storeId) return;
+    try {
+      await api("/alerts/generate-low-stock?store_id=" + storeId, { method: "POST" });
+      setMessage("Low-stock alerts generated.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to generate alerts");
+    }
+  }
+
+  async function resolve(id: number) {
+    if (!storeId) return;
+    try {
+      await api("/alerts/resolve?store_id=" + storeId + "&id=" + id, { method: "POST" });
+      setMessage("Alert resolved.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to resolve alert");
+    }
+  }
+
+  async function remove(id: number) {
+    if (!storeId || !confirm("Delete this alert?")) return;
+    try {
+      await api("/alerts/delete?store_id=" + storeId + "&id=" + id, { method: "DELETE" });
+      setMessage("Alert deleted.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to delete alert");
+    }
+  }
+
+  return (
+    <DashboardShell title="Alerts">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <p className="text-sm text-white/40">Open alerts from the server.</p>
+        <button onClick={generate} className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Generate low-stock alerts</button>
+      </div>
+      {message && <p className="mt-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
+      {error && <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+      <div className="mt-6 space-y-3">
+        {alerts.map((alert) => (
+          <article key={alert.id} className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row">
+              <div>
+                <p className="text-xs uppercase text-orange-400">{alert.type}</p>
+                <p className="mt-2">{alert.message}</p>
+                <p className="mt-2 text-xs text-white/30">Product {alert.product_id ? "#" + alert.product_id : "—"} · {new Date(alert.created_at).toLocaleString()}</p>
+              </div>
+              <div className="flex gap-4 text-sm"><button onClick={() => resolve(alert.id)} className="text-green-400">Resolve</button><button onClick={() => remove(alert.id)} className="text-red-300">Delete</button></div>
+            </div>
+          </article>
+        ))}
+        {!alerts.length && <div className="rounded-2xl border border-white/10 bg-[#151515] p-10 text-center text-white/30">No open alerts.</div>}
+      </div>
+    </DashboardShell>
+  );
+}
