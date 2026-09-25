@@ -55,9 +55,27 @@ export default function DashboardShell({
       roles,
     ] as NavItem);
 
-  async function logout() {
-    try { await api("/auth/logout", { method: "POST" }); } finally { window.location.href = "/login"; }
-  }
+  return (
+    <div className="min-h-screen bg-[#0b0b0b] text-white lg:flex">
+      <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#111] p-5 lg:block">
+        <Link href="/dashboard" className="mb-2 block text-xl font-bold">
+          TX <span className="text-orange-500">RetailOS</span>
+        </Link>
+        <p className="mb-1 text-xs text-white/35">{user?.store_name || "Your Store"}</p>
+        <p className="mb-8 truncate text-xs text-white/25">{user?.email}</p>
+        <nav className="space-y-1">
+          {nav.map(([label, href]) => (
+            <Link key={href} href={href} className={pathname === href
+              ? "block rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-semibold text-black"
+              : "block rounded-lg px-3 py-2.5 text-sm text-white/60 hover:bg-white/5 hover:text-white"}>
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <button onClick={logout} className="mt-8 w-full rounded-lg border border-white/10 px-3 py-2.5 text-sm text-white/50 hover:text-white">
+          Sign out
+        </button>
+      </aside>
 
       <main className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-white/10 px-5 py-4 md:px-8">
