@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import {formatNigeriaDateTime} from "@/lib/nigeria-time";
@@ -108,4 +107,3 @@ function Metric({ title, value }: { title: string; value: string }) {
 function Section({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return <section className={`rounded-2xl border border-white/10 bg-[#151515] p-5 ${className}`}><h2 className="mb-4 font-semibold">{title}</h2>{children}</section>;
 }
-function Metric({title,value}:{title:string;value:string}){return <div className="rounded-2xl border border-white/10 bg-[#151515] p-5"><p className="text-xs text-white/40">{title}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>}
