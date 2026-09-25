@@ -1,5 +1,5 @@
-"use client";
-import { useEffect,useState } from "react";
-import { api } from "@/lib/api";
-type Sale={id:number;customer_id:number|null;total_amount:string;created_at:string};
-export default function TransactionsPage(){const[rows,setRows]=useState<Sale[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");useEffect(()=>{(async()=>{try{const{user}=await api<{user:{store_id:number|null}}>("/auth/me");if(!user.store_id)throw new Error("No store is associated with this account");const d=await api<{sales:Sale[]}>(`/sales?store_id=${user.store_id}`);setRows(d.sales)}catch(e){setError(e instanceof Error?e.message:"Unable to load transactions")}finally{setLoading(false)}})()},[]);return <main className="min-h-screen bg-[#0b0b0b] p-5 text-white md:p-8"><div className="mx-auto max-w-6xl"><h1 className="text-2xl font-semibold">Transactions</h1>{error&&<p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}<div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5"><table className="w-full text-left text-sm"><thead className="text-xs text-white/40"><tr><th className="px-3 py-3">DATE</th><th className="px-3 py-3">RECEIPT</th><th className="px-3 py-3">AMOUNT</th><th className="px-3 py-3">CUSTOMER</th></tr></thead><tbody>{loading?<tr><td colSpan={4} className="px-3 py-10 text-center text-white/30">Loading...</td></tr>:rows.map(r=><tr key={r.id} className="border-t border-white/5"><td className="px-3 py-4">{new Date(r.created_at).toLocaleString()}</td><td className="px-3 py-4">#{r.id}</td><td className="px-3 py-4">₦{Number(r.total_amount).toLocaleString()}</td><td className="px-3 py-4">{r.customer_id ? `#${r.customer_id}` : "Walk-in"}</td></tr>)}{!loading&&!rows.length&&<tr><td colSpan={4} className="px-3 py-10 text-center text-white/30">No transactions found.</td></tr>}</tbody></table></div></div></main>}
+import { redirect } from "next/navigation";
+
+export default function TransactionsPage() {
+  redirect("/sales");
+}
