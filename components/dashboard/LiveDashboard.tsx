@@ -5,14 +5,9 @@ import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import {formatNigeriaDateTime} from "@/lib/nigeria-time";
 
-type Role = "admin" | "manager" | "employee";
-type SessionUser = { id: string; username: string; fullName: string; role: string };
-type Data = {
-  stats: { todaySales: number | string; todayTransactions: number; count: number; units: number };
-  lowStock: { id: string; name: string; stockQuantity: number }[];
-  recent: { receiptNo: string; amount: number | string; payment: string; status: string; createdAt: string; employeeName: string }[];
-  activity: { action: string; entity: string; createdAt: string; userName: string }[];
-};
+type User = { id:number; username:string; email:string; store_id:number|null; store_name?:string|null };
+type Dashboard = { products_count:number; low_stock_count:number; open_alerts_count:number; today_sales_count:number; today_sales_total:string };
+type Sale = { id:number; customer_id:number|null; total_amount:string; created_at:string };
 
 export default function LiveDashboard({ role, user, title }: { role: Role; user: string; title: string }) {
   const [data, setData] = useState<Data | null>(null);
@@ -113,3 +108,4 @@ function Metric({ title, value }: { title: string; value: string }) {
 function Section({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return <section className={`rounded-2xl border border-white/10 bg-[#151515] p-5 ${className}`}><h2 className="mb-4 font-semibold">{title}</h2>{children}</section>;
 }
+function Metric({title,value}:{title:string;value:string}){return <div className="rounded-2xl border border-white/10 bg-[#151515] p-5"><p className="text-xs text-white/40">{title}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>}

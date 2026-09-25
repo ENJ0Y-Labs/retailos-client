@@ -5,7 +5,16 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {useEffect,useState} from "react";
 
-export type AppRole = "admin" | "manager" | "employee";
+const nav = [
+  ["Dashboard", "/dashboard"],
+  ["Sales", "/sales"],
+  ["Products", "/items"],
+  ["Inventory", "/inventory"],
+  ["Transactions", "/transactions"],
+  ["Customers", "/customers"],
+  ["Alerts", "/alerts"],
+  ["Settings", "/settings"],
+] as const;
 
 type NavItem = readonly [label: string, href: string, roles: readonly AppRole[]];
 
@@ -46,37 +55,9 @@ export default function DashboardShell({
       roles,
     ] as NavItem);
 
-  return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white lg:flex">
-      <aside className="hidden w-64 shrink-0 border-r border-white/10 bg-[#111] p-5 lg:block">
-        <Link href={dashboardHref} className="mb-8 block text-xl font-bold">
-          TX <span className="text-orange-500">RetailOS</span>
-        </Link>
-        <nav className="space-y-1">
-          {items.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className={`block rounded-lg px-3 py-2.5 text-sm ${
-                pathname === href
-                  ? "bg-orange-500 font-semibold text-black"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <button
-          onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST" });
-            window.location.href = "/login";
-          }}
-          className="mt-8 w-full rounded-lg border border-white/10 px-3 py-2.5 text-sm text-white/50 hover:text-white"
-        >
-          Sign out
-        </button>
-      </aside>
+  async function logout() {
+    try { await api("/auth/logout", { method: "POST" }); } finally { window.location.href = "/login"; }
+  }
 
       <main className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-white/10 px-5 py-4 md:px-8">
