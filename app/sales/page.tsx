@@ -17,7 +17,6 @@ export default function SalesPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [query, setQuery] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const [storeId, setStoreId] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -27,10 +26,8 @@ export default function SalesPage() {
   async function load() {
     try {
       setLoading(true);
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
-      const id = me.user.store_id;
-      setStoreId(id);
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
 
       const [p, c, s] = await Promise.all([
         api<{ products: Product[] }>("/product/list?store_id=" + id),
