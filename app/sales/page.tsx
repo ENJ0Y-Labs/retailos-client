@@ -2,19 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { Customer, Product, Receipt, SaleSummary } from "@/lib/types";
 
 type CartItem = { product: Product; quantity: number };
 
 export default function SalesPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<SaleSummary[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [query, setQuery] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const [storeId, setStoreId] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -24,10 +26,8 @@ export default function SalesPage() {
   async function load() {
     try {
       setLoading(true);
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
-      const id = me.user.store_id;
-      setStoreId(id);
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
 
       const [p, c, s] = await Promise.all([
         api<{ products: Product[] }>("/product/list?store_id=" + id),
@@ -45,7 +45,7 @@ export default function SalesPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [storeId]);
 
   const filtered = products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
   const total = useMemo(() => cart.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0), [cart]);
