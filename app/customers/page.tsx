@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { Customer } from "@/lib/types";
 
@@ -13,6 +14,8 @@ type HistoryRow = {
 };
 
 export default function CustomersPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selected, setSelected] = useState<(Customer & { purchase_history: HistoryRow[] }) | null>(null);
   const [name, setName] = useState("");
@@ -22,23 +25,23 @@ export default function CustomersPage() {
 
   async function load() {
     try {
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
-      const data = await api<{ customers: Customer[] }>("/customers?store_id=" + me.user.store_id);
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
+      const data = await api<{ customers: Customer[] }>("/customers?store_id=" + id);
       setCustomers(data.customers);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load customers");
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [storeId]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
-      await api("/customers", { method: "POST", json: { store_id: me.user.store_id, name, contact: contact || null } });
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
+      await api("/customers", { method: "POST", json: { store_id: id, name, contact: contact || null } });
       setName("");
       setContact("");
       setMessage("Customer created.");
@@ -50,10 +53,10 @@ export default function CustomersPage() {
 
   async function history(id: number) {
     try {
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
+      const store = storeId;
+      if (!store) throw new Error("No store is associated with this account");
       const data = await api<{ customer: Customer & { purchase_history: HistoryRow[] } }>(
-        "/customers/history?id=" + id + "&store_id=" + me.user.store_id,
+        "/customers/history?id=" + id + "&store_id=" + store,
       );
       setSelected(data.customer);
     } catch (e) {
