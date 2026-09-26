@@ -2,29 +2,25 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { InventoryMovement, Product } from "@/lib/types";
 
 export default function InventoryPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
-  const [storeId, setStoreId] = useState<number | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [movementProduct, setMovementProduct] = useState<number | null>(null);
   const [form, setForm] = useState({ name: "", price: "", stock: "0", threshold: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function store() {
-    const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-    if (!me.user.store_id) throw new Error("No store is associated with this account");
-    setStoreId(me.user.store_id);
-    return me.user.store_id;
-  }
-
   async function load() {
     try {
-      const id = storeId ?? await store();
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
       const data = await api<{ products: Product[] }>("/product/list?store_id=" + id);
       setProducts(data.products);
     } catch (e) {
@@ -34,7 +30,8 @@ export default function InventoryPage() {
 
   async function loadMovements(productId?: number) {
     try {
-      const id = storeId ?? await store();
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
       let path = "/product/movements?store_id=" + id;
       if (productId) path += "&product_id=" + productId;
       const data = await api<{ movements: InventoryMovement[] }>(path);
@@ -45,7 +42,7 @@ export default function InventoryPage() {
     }
   }
 
-  useEffect(() => { load(); loadMovements(); }, []);
+  useEffect(() => { load(); loadMovements(); }, [storeId]);
 
   function reset() {
     setEditing(null);
@@ -65,7 +62,8 @@ export default function InventoryPage() {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      const id = storeId ?? await store();
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
       const payload = {
         store_id: id,
         name: form.name,
@@ -91,7 +89,8 @@ export default function InventoryPage() {
 
   async function adjust(product: Product, change: number) {
     try {
-      const id = storeId ?? await store();
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
       await api("/product/adjust", {
         method: "POST",
         json: { store_id: id, id: product.id, quantity_change: change, reason: "Manual stock adjustment" },
@@ -106,7 +105,8 @@ export default function InventoryPage() {
   async function remove(productId: number) {
     if (!confirm("Delete this product?")) return;
     try {
-      const id = storeId ?? await store();
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
       await api("/product/delete", { method: "DELETE", json: { store_id: id, id: productId } });
       setMessage("Product deleted.");
       await load();
