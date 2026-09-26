@@ -2,28 +2,29 @@
 
 import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { Alert } from "@/lib/types";
 
 export default function AlertsPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [storeId, setStoreId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   async function load() {
     try {
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
-      setStoreId(me.user.store_id);
-      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + me.user.store_id);
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
+      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + id);
       setAlerts(data.alerts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load alerts");
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [storeId]);
 
   async function generate() {
     if (!storeId) return;
