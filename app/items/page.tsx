@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { Product } from "@/lib/types";
 
 export default function ItemsPage() {
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [selected, setSelected] = useState<Product | null>(null);
   const [query, setQuery] = useState("");
@@ -13,9 +15,9 @@ export default function ItemsPage() {
 
   async function load() {
     try {
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
-      const data = await api<{ products: Product[] }>("/product/list?store_id=" + me.user.store_id);
+      const storeId = user?.store_id;
+      if (!storeId) throw new Error("No store is associated with this account");
+      const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
       setProducts(data.products);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load products");
@@ -24,10 +26,10 @@ export default function ItemsPage() {
 
   async function viewProduct(id: number) {
     try {
-      const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-      if (!me.user.store_id) throw new Error("No store is associated with this account");
+      const storeId = user?.store_id;
+      if (!storeId) throw new Error("No store is associated with this account");
       const data = await api<{ product: Product }>(
-        "/product/get?id=" + id + "&store_id=" + me.user.store_id,
+        "/product/get?id=" + id + "&store_id=" + storeId,
       );
       setSelected(data.product);
     } catch (e) {
@@ -35,7 +37,7 @@ export default function ItemsPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [user?.store_id]);
 
   const filtered = products.filter((product) =>
     product.name.toLowerCase().includes(query.toLowerCase()),
