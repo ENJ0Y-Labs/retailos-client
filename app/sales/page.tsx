@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { Customer, Product, Receipt, SaleSummary } from "@/lib/types";
 
 type CartItem = { product: Product; quantity: number };
 
 export default function SalesPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<SaleSummary[]>([]);
@@ -45,7 +48,7 @@ export default function SalesPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [storeId]);
 
   const filtered = products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
   const total = useMemo(() => cart.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0), [cart]);
