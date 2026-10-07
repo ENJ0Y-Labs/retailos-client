@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -34,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(!isPublic);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await api<{ user: User }>("/auth/me");
       setUser(data.user);
@@ -44,9 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error instanceof ApiError && error.status === 401) router.replace("/login");
       return null;
     }
-  }
+  }, [router]);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     try {
       await api("/auth/logout", { method: "POST" });
     } finally {
@@ -54,25 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.replace("/login");
       router.refresh();
     }
-  }
+  }, [router]);
 
   useEffect(() => {
-    if (isPublic) {
-      setLoading(false);
-      return;
-    }
+    if (isPublic) return;
 
     let cancelled = false;
-    setLoading(true);
 
     refresh().finally(() => {
       if (!cancelled) setLoading(false);
     });
 
     return () => { cancelled = true; };
-  }, [pathname, isPublic]);
+  }, [isPublic, refresh]);
 
-  const value = useMemo(() => ({ user, loading, refresh, logout }), [user, loading]);
+  const value = useMemo(() => ({ user, loading, refresh, logout }), [user, loading, refresh, logout]);
 
   if (!isPublic && loading) return <Loader />;
   if (!isPublic && !user) return null;
