@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -23,7 +23,7 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const id = storeId;
@@ -43,9 +43,9 @@ export default function SalesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [storeId]);
 
-  useEffect(() => { load(); }, [storeId]);
+  useEffect(() => { load(); }, [load]);
 
   const filtered = products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
   const total = useMemo(() => cart.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0), [cart]);
