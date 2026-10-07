@@ -23,18 +23,18 @@ export default function CustomersPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function load() {
-    try {
-      const id = storeId;
-      if (!id) throw new Error("No store is associated with this account");
-      const data = await api<{ customers: Customer[] }>("/customers?store_id=" + id);
-      setCustomers(data.customers);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load customers");
+  useEffect(() => {
+    async function load() {
+      try {
+        if (!storeId) throw new Error("No store is associated with this account");
+        const data = await api<{ customers: Customer[] }>("/customers?store_id=" + storeId);
+        setCustomers(data.customers);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unable to load customers");
+      }
     }
-  }
-
-  useEffect(() => { load(); }, [storeId]);
+    void load();
+  }, [storeId]);
 
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +45,8 @@ export default function CustomersPage() {
       setName("");
       setContact("");
       setMessage("Customer created.");
-      await load();
+      const data = await api<{ customers: Customer[] }>("/customers?store_id=" + id);
+      setCustomers(data.customers);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to create customer");
     }
@@ -68,22 +69,18 @@ export default function CustomersPage() {
     <DashboardShell title="Customers">
       {message && <p className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
       {error && <p className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-
       <form onSubmit={create} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-[1fr_1fr_auto]">
         <input required minLength={2} value={name} onChange={(e) => setName(e.target.value)} className="field" placeholder="Customer name" />
         <input value={contact} onChange={(e) => setContact(e.target.value)} className="field" placeholder="Phone / contact" />
         <button className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">Add customer</button>
       </form>
-
       <section className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
         <table className="w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">CONTACT</th><th className="px-3 py-3">ID</th><th className="px-3 py-3">ACTION</th></tr></thead>
           <tbody>
             {customers.map((customer) => (
               <tr key={customer.id} className="border-t border-white/5">
-                <td className="px-3 py-4">{customer.name}</td>
-                <td className="px-3 py-4">{customer.contact || "—"}</td>
-                <td className="px-3 py-4">#{customer.id}</td>
+                <td className="px-3 py-4">{customer.name}</td><td className="px-3 py-4">{customer.contact || "—"}</td><td className="px-3 py-4">#{customer.id}</td>
                 <td className="px-3 py-4"><button onClick={() => history(customer.id)} className="rounded bg-white/10 px-2 py-1 text-xs">Purchase history</button></td>
               </tr>
             ))}
@@ -91,7 +88,6 @@ export default function CustomersPage() {
           </tbody>
         </table>
       </section>
-
       {selected && (
         <section className="mt-6 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
           <div className="flex items-start justify-between">
