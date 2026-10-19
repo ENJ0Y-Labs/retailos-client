@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import type { User } from "@/lib/types";
 import {useEffect,useState} from "react";
 
 const nav = [
@@ -40,7 +41,7 @@ export default function DashboardShell({
 }: {
   children: ReactNode;
   role: AppRole;
-  user: string;
+  user: User & { role?: string };
   title: string;
 }) {
   const pathname = usePathname();
@@ -82,7 +83,7 @@ export default function DashboardShell({
           <div>
             <p className="text-xs uppercase tracking-wider text-white/75">Store: {storeName}</p>
             <p className="text-xs uppercase tracking-wider text-white/70">{role}</p>
-            <p className="font-medium">{user}</p>
+            <p className="font-medium">{user.username || user.email}</p>
           </div>
           <button onClick={logout} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5 lg:hidden">
             Sign out
