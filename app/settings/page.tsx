@@ -1,44 +1,8 @@
 "use client";
-
-import { useState } from "react";
-import DashboardShell from "@/components/layout/DashboardShell";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { getApiUrl } from "@/lib/api";
-
-export default function SettingsPage() {
-  const { user, logout, refresh } = useAuth();
-  const [message, setMessage] = useState("");
-
-  async function checkSession() {
-    const current = await refresh();
-    setMessage(current ? "Server session is active." : "Server session is no longer active.");
-  }
-
-  return (
-    <DashboardShell title="Settings">
-      <div className="grid gap-5 lg:grid-cols-2">
-        <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-          <h2 className="font-semibold">Account</h2>
-          <div className="mt-4 space-y-3 text-sm">
-            <Row label="Username" value={user?.username || "—"} />
-            <Row label="Email" value={user?.email || "—"} />
-            <Row label="Store" value={user?.store_name || "—"} />
-            <Row label="Store ID" value={String(user?.store_id ?? "—")} />
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-          <h2 className="font-semibold">Server connection</h2>
-          <p className="mt-3 break-all text-sm text-white/40">{getApiUrl()}</p>
-          <button onClick={checkSession} className="mt-5 rounded-xl bg-white/10 px-4 py-2 text-sm">Check server session</button>
-          <button onClick={logout} className="mt-3 block rounded-xl bg-red-500/10 px-4 py-2 text-sm text-red-300">Sign out</button>
-          {message && <p className="mt-4 text-sm text-orange-300">{message}</p>}
-        </section>
-      </div>
-    </DashboardShell>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between gap-4 rounded-lg bg-white/5 p-3"><span className="text-white/40">{label}</span><span className="text-right">{value}</span></div>;
+import {FormEvent,useEffect,useState} from "react";
+export default function SettingsPage(){
+ const [name,setName]=useState("");const [message,setMessage]=useState("");const [saving,setSaving]=useState(false);
+ useEffect(()=>{fetch("/api/store").then(r=>r.json()).then(d=>{if(d.name)setName(d.name);else if(d.error)setMessage(d.error)}).catch(()=>setMessage("Could not load store settings."))},[]);
+ async function save(e:FormEvent){e.preventDefault();setSaving(true);setMessage("");try{const r=await fetch("/api/store",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to save");setName(d.name);setMessage("Store name updated. Refresh the dashboard to see the new name.")}catch(e){setMessage(e instanceof Error?e.message:"Unable to save")}finally{setSaving(false)}}
+ return <main className="min-h-screen bg-[#0b0b0b] p-5 text-white md:p-8"><div className="mx-auto max-w-4xl"><h1 className="text-2xl font-semibold">Settings</h1><div className="mt-6 space-y-5"><form onSubmit={save} className="rounded-2xl border border-white/10 bg-[#151515] p-5"><h2 className="font-semibold">Store profile</h2><label className="mt-4 block text-sm text-white/80" htmlFor="store-name">Store name</label><input id="store-name" className="field mt-2" maxLength={160} required value={name} onChange={e=>setName(e.target.value)} placeholder="Your store name"/><p className="mt-2 text-xs text-white/70">Shown in the RetailOS top bar.</p><button disabled={saving} className="mt-4 rounded-xl bg-orange-500 px-4 py-2 font-semibold text-black disabled:opacity-60">{saving?"Saving...":"Save store name"}</button>{message&&<p role="status" className="mt-3 text-sm text-orange-300">{message}</p>}</form>{[["Account","Profile editing and PIN setup — Coming Soon"],["Notifications","Notification preferences — Coming Soon"],["Devices","Managing logged-in devices — Coming Soon"]].map(([title,text])=><section key={title} className="rounded-2xl border border-white/10 bg-[#151515] p-5"><h2 className="font-semibold">{title}</h2><p className="mt-2 text-sm text-white/70">{text}</p></section>)}</div></div></main>
 }
