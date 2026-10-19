@@ -49,24 +49,21 @@ export default function SalesPage() {
   const checkoutLock = useRef(false);
 
   useEffect(() => {
+    let savedMethod: string | null = null;
+    let pendingId: string | null = null;
     try {
-      const savedMethod = localStorage.getItem("retailos-payment-method");
-
-      if (
-        savedMethod &&
-        ["CASH", "TRANSFER", "POS"].includes(savedMethod)
-      ) {
-        setPaymentMethod(savedMethod);
-      }
-
-      const pendingId = localStorage.getItem("retailos-pending-sale-id");
-
-      if (pendingId) {
-        setTransactionId(pendingId);
-      }
+      savedMethod = localStorage.getItem("retailos-payment-method");
+      pendingId = localStorage.getItem("retailos-pending-sale-id");
     } catch {
       // Storage may be unavailable in restricted browser environments.
     }
+
+    void Promise.resolve().then(() => {
+      if (savedMethod && ["CASH", "TRANSFER", "POS"].includes(savedMethod)) {
+        setPaymentMethod(savedMethod);
+      }
+      if (pendingId) setTransactionId(pendingId);
+    });
   }, []);
 
   const load = useCallback(async () => {
@@ -103,7 +100,7 @@ export default function SalesPage() {
   }, [storeId]);
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(() => load());
   }, [load]);
 
   const filteredProducts = useMemo(
