@@ -13,25 +13,26 @@ export default function AlertsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function load() {
-    try {
-      const id = storeId;
-      if (!id) throw new Error("No store is associated with this account");
-      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + id);
-      setAlerts(data.alerts);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load alerts");
+  useEffect(() => {
+    async function load() {
+      try {
+        if (!storeId) throw new Error("No store is associated with this account");
+        const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + storeId);
+        setAlerts(data.alerts);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unable to load alerts");
+      }
     }
-  }
-
-  useEffect(() => { load(); }, [storeId]);
+    void load();
+  }, [storeId]);
 
   async function generate() {
     if (!storeId) return;
     try {
       await api("/alerts/generate-low-stock?store_id=" + storeId, { method: "POST" });
       setMessage("Low-stock alerts generated.");
-      await load();
+      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + storeId);
+      setAlerts(data.alerts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to generate alerts");
     }
@@ -42,7 +43,8 @@ export default function AlertsPage() {
     try {
       await api("/alerts/resolve?store_id=" + storeId + "&id=" + id, { method: "POST" });
       setMessage("Alert resolved.");
-      await load();
+      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + storeId);
+      setAlerts(data.alerts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to resolve alert");
     }
@@ -53,7 +55,8 @@ export default function AlertsPage() {
     try {
       await api("/alerts/delete?store_id=" + storeId + "&id=" + id, { method: "DELETE" });
       setMessage("Alert deleted.");
-      await load();
+      const data = await api<{ alerts: Alert[] }>("/alerts?store_id=" + storeId);
+      setAlerts(data.alerts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to delete alert");
     }
