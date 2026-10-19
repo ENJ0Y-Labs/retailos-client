@@ -28,7 +28,6 @@ export default function SalesPage() {
 
   const load = useCallback(async () => {
     try {
-      setLoading(true);
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
 
