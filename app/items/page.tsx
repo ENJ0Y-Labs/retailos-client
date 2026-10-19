@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -13,16 +13,18 @@ export default function ItemsPage() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    try {
-      const storeId = user?.store_id;
-      if (!storeId) throw new Error("No store is associated with this account");
-      const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
-      setProducts(data.products);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load products");
-    }
-  }, [user?.store_id]);
+  useEffect(() => {
+    void Promise.resolve().then(async () => {
+      try {
+        const storeId = user?.store_id;
+        if (!storeId) throw new Error("No store is associated with this account");
+        const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
+        setProducts(data.products);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unable to load products");
+      }
+    });
+  }, [user]);
 
   async function viewProduct(id: number) {
     try {
@@ -36,10 +38,6 @@ export default function ItemsPage() {
       setError(e instanceof Error ? e.message : "Unable to load product");
     }
   }
-
-  useEffect(() => {
-    void Promise.resolve().then(() => load());
-  }, [load]);
 
   const filtered = products.filter((product) =>
     product.name.toLowerCase().includes(query.toLowerCase()),
