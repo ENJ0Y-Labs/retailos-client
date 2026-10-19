@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import {useEffect,useState} from "react";
+import type { User } from "@/lib/types";
+import { useAuth } from "@/components/auth/AuthProvider";
+
+type AppRole = "admin" | "manager" | "employee";
 
 const nav = [
   ["Dashboard", "/dashboard"],
@@ -40,12 +43,11 @@ export default function DashboardShell({
 }: {
   children: ReactNode;
   role: AppRole;
-  user: string;
+  user: User & { role?: string };
   title: string;
 }) {
   const pathname = usePathname();
-  const [storeName,setStoreName]=useState("My Store");
-  useEffect(()=>{fetch("/api/store").then(r=>r.json()).then(d=>{if(d.name)setStoreName(d.name)}).catch(()=>{})},[]);
+  const { logout } = useAuth();
   const dashboardHref = `/${role}-dashboard`;
   const items = allItems
     .filter(([, , roles]) => roles.includes(role))
@@ -80,9 +82,9 @@ export default function DashboardShell({
       <main className="min-w-0 flex-1">
         <header className="flex items-center justify-between border-b border-white/10 px-5 py-4 md:px-8">
           <div>
-            <p className="text-xs uppercase tracking-wider text-white/75">Store: {storeName}</p>
+            <p className="text-xs uppercase tracking-wider text-white/75">Store: {user.store_name || "My Store"}</p>
             <p className="text-xs uppercase tracking-wider text-white/70">{role}</p>
-            <p className="font-medium">{user}</p>
+            <p className="font-medium">{user.username || user.email}</p>
           </div>
           <button onClick={logout} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5 lg:hidden">
             Sign out

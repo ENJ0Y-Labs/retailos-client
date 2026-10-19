@@ -35,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(!isPublic);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await api<{ user: User }>("/auth/me");
       setUser(data.user);
@@ -62,12 +61,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
 
-    refresh().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    async function checkSession() {
+      try {
+        const data = await api<{ user: User }>("/auth/me");
+        if (!cancelled) setUser(data.user);
+      } catch (error) {
+        if (!cancelled) {
+          setUser(null);
+          if (error instanceof ApiError && error.status === 401) router.replace("/login");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void checkSession();
 
     return () => { cancelled = true; };
-  }, [isPublic, refresh]);
+  }, [isPublic, router]);
 
   const value = useMemo(() => ({ user, loading, refresh, logout }), [user, loading, refresh, logout]);
 
