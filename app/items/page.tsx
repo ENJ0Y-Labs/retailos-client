@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -13,7 +13,7 @@ export default function ItemsPage() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const storeId = user?.store_id;
       if (!storeId) throw new Error("No store is associated with this account");
@@ -22,7 +22,7 @@ export default function ItemsPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load products");
     }
-  }
+  }, [user?.store_id]);
 
   async function viewProduct(id: number) {
     try {
@@ -37,7 +37,9 @@ export default function ItemsPage() {
     }
   }
 
-  useEffect(() => { load(); }, [user?.store_id]);
+  useEffect(() => {
+    void Promise.resolve().then(() => load());
+  }, [load]);
 
   const filtered = products.filter((product) =>
     product.name.toLowerCase().includes(query.toLowerCase()),
