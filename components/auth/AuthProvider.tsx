@@ -34,8 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(!isPublic);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const data = await api<{ user: User }>("/auth/me");
       setUser(data.user);
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false;
 
-    refresh().finally(() => {
+    refresh(false).finally(() => {
       if (!cancelled) setLoading(false);
     });
 
