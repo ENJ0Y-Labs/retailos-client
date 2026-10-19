@@ -167,7 +167,7 @@ export default function InventoryPage() {
         <input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field" placeholder="Product name" />
         <input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field" placeholder="Price" />
         <input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field" placeholder={editing ? "Stock quantity" : "Opening stock"} />
-        <select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value as ProductType })} className="field" aria-label="Product type">
+        <select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value as ProductType })} className="field" aria-label="Product type" disabled={Boolean(editing)}>
           <option value="Physical">Physical product</option>
           <option value="Service">Service</option>
         </select>
