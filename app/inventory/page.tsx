@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
-import type { InventoryMovement, Product } from "@/lib/types";
+import type { InventoryMovement, Product, ProductType } from "@/lib/types";
 
 export default function InventoryPage() {
   const { user } = useAuth();
@@ -13,7 +13,14 @@ export default function InventoryPage() {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [editing, setEditing] = useState<number | null>(null);
   const [movementProduct, setMovementProduct] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", price: "", stock: "0", threshold: "" });
+  const [form, setForm] = useState({
+    name: "",
+    price: "",
+    stock: "0",
+    threshold: "",
+    productType: "Physical" as ProductType,
+    baseUnit: "piece",
+  });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -58,7 +65,14 @@ export default function InventoryPage() {
 
   function reset() {
     setEditing(null);
-    setForm({ name: "", price: "", stock: "0", threshold: "" });
+    setForm({
+      name: "",
+      price: "",
+      stock: "0",
+      threshold: "",
+      productType: "Physical",
+      baseUnit: "piece",
+    });
   }
 
   function beginEdit(product: Product) {
@@ -68,6 +82,8 @@ export default function InventoryPage() {
       price: String(product.price),
       stock: String(product.stock_quantity),
       threshold: product.low_stock_threshold == null ? "" : String(product.low_stock_threshold),
+      productType: product.product_type,
+      baseUnit: product.base_unit,
     });
   }
 
@@ -76,12 +92,25 @@ export default function InventoryPage() {
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
-      const payload = { store_id: id, name: form.name, price: Number(form.price), stock_quantity: Number(form.stock), low_stock_threshold: form.threshold === "" ? null : Number(form.threshold) };
+      const commonPayload = {
+        store_id: id,
+        name: form.name.trim(),
+        price: Number(form.price),
+        product_type: form.productType,
+        base_unit: form.baseUnit.trim(),
+        low_stock_threshold: form.threshold === "" ? null : Number(form.threshold),
+      };
       if (editing) {
-        await api("/product/update", { method: "PATCH", json: { ...payload, id: editing } });
+        await api("/product/update", {
+          method: "PATCH",
+          json: { ...commonPayload, id: editing, stock_quantity: Number(form.stock) },
+        });
         setMessage("Product updated.");
       } else {
-        await api("/product/create", { method: "POST", json: payload });
+        await api("/product/create", {
+          method: "POST",
+          json: { ...commonPayload, opening_stock: Number(form.stock) },
+        });
         setMessage("Product created.");
       }
       reset();
@@ -134,8 +163,13 @@ export default function InventoryPage() {
       <form onSubmit={save} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-4">
         <input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field" placeholder="Product name" />
         <input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field" placeholder="Price" />
-        <input required min="0" type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field" placeholder="Opening stock" />
-        <input min="0" type="number" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field" placeholder="Low-stock threshold" />
+        <input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field" placeholder={editing ? "Stock quantity" : "Opening stock"} />
+        <select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value as ProductType })} className="field" aria-label="Product type">
+          <option value="Physical">Physical product</option>
+          <option value="Service">Service</option>
+        </select>
+        <input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field" placeholder="Base unit (e.g. piece)" disabled={form.productType === "Service"} />
+        <input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field" placeholder="Low-stock threshold" />
         <div className="flex gap-2 md:col-span-4">
           <button className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">{editing ? "Save changes" : "Add product"}</button>
           {editing && <button type="button" onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm">Cancel</button>}
@@ -143,11 +177,26 @@ export default function InventoryPage() {
       </form>
       <section className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
         <table className="w-full text-left text-sm">
-          <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>
+          <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">TYPE</th><th className="px-3 py-3">BASE UNIT</th><th className="px-3 py-3">SELLING UNITS</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>
           <tbody>
             {products.map((product) => (
               <tr key={product.id} className="border-t border-white/5">
-                <td className="px-3 py-4">{product.name}</td><td className="px-3 py-4">₦{Number(product.price).toLocaleString()}</td><td className="px-3 py-4">{product.stock_quantity}</td><td className="px-3 py-4">{product.low_stock_threshold ?? "—"}</td>
+                <td className="px-3 py-4">{product.name}</td>
+                <td className="px-3 py-4">{product.product_type}</td>
+                <td className="px-3 py-4">{product.base_unit}</td>
+                <td className="px-3 py-4">
+                  <div className="space-y-1">
+                    {(product.units ?? []).map((unit) => (
+                      <p key={unit.id} className="whitespace-nowrap text-xs text-white/60">
+                        {unit.name}: {unit.base_quantity} {product.base_unit} · ₦{Number(unit.price).toLocaleString("en-NG")}
+                      </p>
+                    ))}
+                    {!product.units?.length && <span className="text-white/30">No units configured</span>}
+                  </div>
+                </td>
+                <td className="px-3 py-4">₦{Number(product.price).toLocaleString()}</td>
+                <td className="px-3 py-4">{product.stock_quantity} {product.base_unit}</td>
+                <td className="px-3 py-4">{product.low_stock_threshold ?? "—"}</td>
                 <td className="px-3 py-4"><div className="flex flex-wrap gap-2">
                   <button onClick={() => adjust(product, 1)} className="rounded bg-white/10 px-2 py-1 text-xs">+1</button>
                   <button disabled={product.stock_quantity <= 0} onClick={() => adjust(product, -1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-30">-1</button>
@@ -157,7 +206,7 @@ export default function InventoryPage() {
                 </div></td>
               </tr>
             ))}
-            {!products.length && <tr><td colSpan={5} className="px-3 py-10 text-center text-white/30">No products yet.</td></tr>}
+            {!products.length && <tr><td colSpan={8} className="px-3 py-10 text-center text-white/30">No products yet.</td></tr>}
           </tbody>
         </table>
       </section>
