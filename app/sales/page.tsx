@@ -47,7 +47,40 @@ export default function SalesPage() {
     }
   }, [storeId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchSalesData() {
+      try {
+        if (!storeId) {
+          await Promise.resolve();
+          if (!cancelled) setError("No store is associated with this account");
+          return;
+        }
+
+        const [p, c, s] = await Promise.all([
+          api<{ products: Product[] }>("/product/list?store_id=" + storeId),
+          api<{ customers: Customer[] }>("/customers?store_id=" + storeId),
+          api<{ sales: SaleSummary[] }>("/sales?store_id=" + storeId),
+        ]);
+
+        if (cancelled) return;
+        setProducts(p.products);
+        setCustomers(c.customers);
+        setSales(s.sales);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Unable to load sales");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void fetchSalesData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId]);
 
   const filtered = products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
   const total = useMemo(() => cart.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0), [cart]);
