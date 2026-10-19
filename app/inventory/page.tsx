@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { formatNigeriaDateTime } from "@/lib/nigeria-time";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -23,6 +24,8 @@ export default function InventoryPage() {
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const actionLock = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -89,6 +92,11 @@ export default function InventoryPage() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setPendingAction("save");
+    setError("");
+    setMessage("");
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
@@ -119,7 +127,11 @@ export default function InventoryPage() {
       reset();
       await loadProducts();
     } catch (e) {
+      setMessage("");
       setError(e instanceof Error ? e.message : "Unable to save product");
+    } finally {
+      actionLock.current = false;
+      setPendingAction(null);
     }
   }
 
@@ -135,6 +147,11 @@ export default function InventoryPage() {
   }
 
   async function adjust(product: Product, change: number) {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setPendingAction("adjust-" + product.id);
+    setError("");
+    setMessage("");
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
@@ -142,12 +159,20 @@ export default function InventoryPage() {
       setMessage("Stock adjusted for " + product.name + ".");
       await loadProducts();
     } catch (e) {
+      setMessage("");
       setError(e instanceof Error ? e.message : "Unable to adjust stock");
+    } finally {
+      actionLock.current = false;
+      setPendingAction(null);
     }
   }
 
   async function remove(productId: number) {
-    if (!confirm("Delete this product?")) return;
+    if (actionLock.current || !confirm("Delete this product?")) return;
+    actionLock.current = true;
+    setPendingAction("delete-" + productId);
+    setError("");
+    setMessage("");
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
@@ -155,7 +180,11 @@ export default function InventoryPage() {
       setMessage("Product deleted.");
       await loadProducts();
     } catch (e) {
+      setMessage("");
       setError(e instanceof Error ? e.message : "Unable to delete product");
+    } finally {
+      actionLock.current = false;
+      setPendingAction(null);
     }
   }
 
@@ -174,8 +203,8 @@ export default function InventoryPage() {
         <input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field" placeholder="Base unit (e.g. piece)" disabled={form.productType === "Service"} />
         <input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field" placeholder="Low-stock threshold" />
         <div className="flex gap-2 md:col-span-4">
-          <button className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">{editing ? "Save changes" : "Add product"}</button>
-          {editing && <button type="button" onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm">Cancel</button>}
+          <button disabled={pendingAction !== null} className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50">{pendingAction === "save" ? "Saving..." : editing ? "Save changes" : "Add product"}</button>
+          {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
       <section className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
@@ -201,10 +230,10 @@ export default function InventoryPage() {
                 <td className="px-3 py-4">{product.stock_quantity} {product.base_unit}</td>
                 <td className="px-3 py-4">{product.low_stock_threshold ?? "—"}</td>
                 <td className="px-3 py-4"><div className="flex flex-wrap gap-2">
-                  <button onClick={() => adjust(product, 1)} className="rounded bg-white/10 px-2 py-1 text-xs">+1</button>
-                  <button disabled={product.stock_quantity <= 0} onClick={() => adjust(product, -1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-30">-1</button>
-                  <button onClick={() => beginEdit(product)} className="rounded bg-white/10 px-2 py-1 text-xs">Edit</button>
-                  <button onClick={() => remove(product.id)} className="rounded bg-red-500/10 px-2 py-1 text-xs text-red-300">Delete</button>
+                  <button disabled={pendingAction !== null} onClick={() => adjust(product, 1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-40">{pendingAction === "adjust-" + product.id ? "Updating..." : "+1"}</button>
+                  <button disabled={pendingAction !== null || product.stock_quantity <= 0} onClick={() => adjust(product, -1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-30">-1</button>
+                  <button disabled={pendingAction !== null} onClick={() => beginEdit(product)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-40">Edit</button>
+                  <button disabled={pendingAction !== null} onClick={() => remove(product.id)} className="rounded bg-red-500/10 px-2 py-1 text-xs text-red-300 disabled:opacity-40">{pendingAction === "delete-" + product.id ? "Deleting..." : "Delete"}</button>
                   <button onClick={() => loadMovements(product.id)} className="rounded bg-orange-500/10 px-2 py-1 text-xs text-orange-300">Movements</button>
                 </div></td>
               </tr>
@@ -221,7 +250,7 @@ export default function InventoryPage() {
         <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">DATE</th><th className="px-3 py-3">PRODUCT</th><th className="px-3 py-3">CHANGE</th><th className="px-3 py-3">NEW STOCK</th><th className="px-3 py-3">REASON</th></tr></thead>
           <tbody>
-            {movements.map((m) => <tr key={m.id} className="border-t border-white/5"><td className="px-3 py-3">{new Date(m.created_at).toLocaleString()}</td><td className="px-3 py-3">#{m.product_id}</td><td className="px-3 py-3">{m.quantity_change > 0 ? "+" + m.quantity_change : m.quantity_change}</td><td className="px-3 py-3">{m.new_quantity}</td><td className="px-3 py-3">{m.reason || "—"}</td></tr>)}
+            {movements.map((m) => <tr key={m.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(m.created_at)}</td><td className="px-3 py-3">#{m.product_id}</td><td className="px-3 py-3">{m.quantity_change > 0 ? "+" + m.quantity_change : m.quantity_change}</td><td className="px-3 py-3">{m.new_quantity}</td><td className="px-3 py-3">{m.reason || "—"}</td></tr>)}
             {!movements.length && <tr><td colSpan={5} className="px-3 py-10 text-center text-white/30">No movements yet.</td></tr>}
           </tbody>
         </table></div>
