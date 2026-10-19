@@ -92,16 +92,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   useEffect(() => {
-    if (isPublic) {
-      setLoading(false);
-      setAuthError("");
-      return;
-    }
+    if (isPublic) return;
+
     let cancelled = false;
-    setLoading(true);
-    void refresh().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
+    void Promise.resolve()
+      .then(() => {
+        if (cancelled) return null;
+        setLoading(true);
+        return refresh();
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
     return () => { cancelled = true; };
   }, [isPublic, refresh]);
 
