@@ -54,7 +54,7 @@ export default function LiveDashboard() {
   const sales = data?.sales ?? data?.recent_sales ?? [];
 
   return (
-    <DashboardShell role={role} user={currentUser.username || currentUser.email} title="Dashboard">
+    <DashboardShell role={role} user={currentUser} title="Dashboard">
       {loading && <p role="status" className="mb-4 text-sm text-white/75">Loading store data…</p>}
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
