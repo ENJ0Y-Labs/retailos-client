@@ -5,24 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
-import type { Customer, Product, Receipt, SaleSummary } from "@/lib/types";
+import type { Customer, Product, ProductUnit, Receipt, SaleSummary } from "@/lib/types";
 
-type Unit = {
-  name: string;
-  baseQuantity: number | string;
-  price: number | string;
-};
-
-type SalesProduct = Product & {
-  itemType?: string;
-  stockQuantity?: number;
-  units?: Unit[];
-  sellingPrice?: number | string;
-};
+type SalesProduct = Product;
+type Unit = ProductUnit;
 
 type CartItem = {
   product: SalesProduct;
-  unitName: string;
+  unitId: number;
   quantity: number;
   price: number;
 };
@@ -59,24 +49,21 @@ export default function SalesPage() {
   const checkoutLock = useRef(false);
 
   useEffect(() => {
+    let savedMethod: string | null = null;
+    let pendingId: string | null = null;
     try {
-      const savedMethod = localStorage.getItem("retailos-payment-method");
-
-      if (
-        savedMethod &&
-        ["CASH", "TRANSFER", "POS"].includes(savedMethod)
-      ) {
-        setPaymentMethod(savedMethod);
-      }
-
-      const pendingId = localStorage.getItem("retailos-pending-sale-id");
-
-      if (pendingId) {
-        setTransactionId(pendingId);
-      }
+      savedMethod = localStorage.getItem("retailos-payment-method");
+      pendingId = localStorage.getItem("retailos-pending-sale-id");
     } catch {
       // Storage may be unavailable in restricted browser environments.
     }
+
+    void Promise.resolve().then(() => {
+      if (savedMethod && ["CASH", "TRANSFER", "POS"].includes(savedMethod)) {
+        setPaymentMethod(savedMethod);
+      }
+      if (pendingId) setTransactionId(pendingId);
+    });
   }, []);
 
   const load = useCallback(async () => {
@@ -113,7 +100,7 @@ export default function SalesPage() {
   }, [storeId]);
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(() => load());
   }, [load]);
 
   const filteredProducts = useMemo(
@@ -137,65 +124,48 @@ export default function SalesPage() {
   const balance = Math.round((total - amountPaid) * 100) / 100;
 
   function stockFor(product: SalesProduct) {
-    return Number(product.stockQuantity ?? product.stock_quantity ?? 0);
+    return Number(product.stock_quantity ?? 0);
   }
 
   function unitsFor(product: SalesProduct): Unit[] {
-    if (product.units?.length) {
-      return product.units;
-    }
+    return Array.isArray(product.units) ? product.units : [];
+  }
 
-    // Compatibility fallback for products using the original data model.
-    return [
-      {
-        name: "Unit",
-        baseQuantity: 1,
-        price: product.price,
-      },
-    ];
+  function isServiceProduct(product: SalesProduct) {
+    return product.product_type.toLowerCase() === "service";
   }
 
   function addProduct(product: SalesProduct) {
     const unit = unitsFor(product)[0];
-
     if (!unit) {
-      setError(`No selling unit is configured for ${product.name}.`);
+      setError(`No selling unit is configured for ${product.name}. Configure a unit before selling this product.`);
       return;
     }
 
-    const isService = product.itemType === "SERVICE";
+    const isService = isServiceProduct(product);
     const stock = stockFor(product);
-
     setError("");
 
     setCart((items) => {
       const index = items.findIndex(
-        (item) =>
-          item.product.id === product.id && item.unitName === unit.name,
+        (item) => item.product.id === product.id && item.unitId === unit.id,
       );
+      const nextQuantity = (index >= 0 ? items[index].quantity : 0) + 1;
+      const reservedBaseQuantity = items
+        .filter((item) => item.product.id === product.id)
+        .reduce((sum, item) => {
+          const selected = unitsFor(item.product).find((candidate) => candidate.id === item.unitId);
+          return sum + item.quantity * Number(selected?.base_quantity ?? 0);
+        }, 0);
 
-      const existingQuantity =
-        index >= 0 ? items[index].quantity : 0;
-
-      const nextQuantity = existingQuantity + 1;
-
-      if (!isService && nextQuantity * Number(unit.baseQuantity) > stock) {
+      if (!isService && reservedBaseQuantity + Number(unit.base_quantity) > stock) {
         setError(`Insufficient stock for ${product.name}.`);
         return items;
       }
 
       if (index < 0) {
-        return [
-          ...items,
-          {
-            product,
-            unitName: unit.name,
-            quantity: 1,
-            price: Number(unit.price),
-          },
-        ];
+        return [...items, { product, unitId: unit.id, quantity: 1, price: Number(unit.price) }];
       }
-
       return items.map((item, i) =>
         i === index ? { ...item, quantity: nextQuantity } : item,
       );
@@ -203,40 +173,37 @@ export default function SalesPage() {
   }
 
   function updateCartItem(index: number, patch: Partial<CartItem>) {
-    setCart((items) =>
-      items.map((item, i) => {
-        if (i !== index) return item;
+    setCart((items) => {
+      const current = items[index];
+      if (!current) return items;
 
-        const updated = { ...item, ...patch };
-        const isService = updated.product.itemType === "SERVICE";
+      const updated = { ...current, ...patch };
+      if (!Number.isInteger(updated.quantity) || updated.quantity < 1) return items;
+      if (!Number.isFinite(updated.price) || updated.price < 0) return items;
 
-        if (!Number.isInteger(updated.quantity) || updated.quantity < 1) {
-          return item;
+      const selectedUnit = unitsFor(updated.product).find((unit) => unit.id === updated.unitId);
+      if (!selectedUnit) {
+        setError(`The selected selling unit is no longer available for ${updated.product.name}.`);
+        return items;
+      }
+
+      if (!isServiceProduct(updated.product)) {
+        const reservedBaseQuantity = items.reduce((sum, item, itemIndex) => {
+          if (item.product.id !== updated.product.id) return sum;
+          const line = itemIndex === index ? updated : item;
+          const unit = unitsFor(line.product).find((candidate) => candidate.id === line.unitId);
+          return sum + line.quantity * Number(unit?.base_quantity ?? 0);
+        }, 0);
+
+        if (reservedBaseQuantity > stockFor(updated.product)) {
+          setError(`Insufficient stock for ${updated.product.name}.`);
+          return items;
         }
+      }
 
-        if (!Number.isFinite(updated.price) || updated.price < 0) {
-          return item;
-        }
-
-        if (!isService) {
-          const unit = unitsFor(updated.product).find(
-            (candidate) => candidate.name === updated.unitName,
-          );
-
-          const requiredStock =
-            updated.quantity * Number(unit?.baseQuantity ?? 1);
-
-          if (requiredStock > stockFor(updated.product)) {
-            setError(`Insufficient stock for ${updated.product.name}.`);
-            return item;
-          }
-        }
-
-        return updated;
-      }),
-    );
-
-    setError("");
+      setError("");
+      return items.map((item, itemIndex) => itemIndex === index ? updated : item);
+    });
   }
 
   async function createSale() {
@@ -276,14 +243,13 @@ export default function SalesPage() {
           store_id: storeId,
           customer_id: customerId ? Number(customerId) : null,
           client_transaction_id: saleTransactionId,
-          payment_method: paymentMethod,
-          amountPaid,
+          payment_method: paymentMethod === "CASH" ? "Cash" : paymentMethod === "TRANSFER" ? "Transfer" : "POS",
+          amount_paid: amountPaid,
           items: cart.map((item) => ({
             product_id: item.product.id,
-            productId: item.product.id,
+            unit_id: item.unitId,
             quantity: item.quantity,
-            unitName: item.unitName,
-            unitPrice: item.price,
+            ...(isServiceProduct(item.product) ? { unit_price: item.price } : {}),
           })),
         },
       });
@@ -390,7 +356,7 @@ export default function SalesPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {filteredProducts.map((product) => {
-                const isService = product.itemType === "SERVICE";
+                const isService = isServiceProduct(product);
                 const stock = stockFor(product);
                 const firstUnit = unitsFor(product)[0];
 
@@ -403,7 +369,7 @@ export default function SalesPage() {
                     <h3 className="mt-1 font-medium">{product.name}</h3>
 
                     <p className="mt-2 text-xs text-white/50">
-                      {isService ? "Service" : `${stock} base units in stock`}
+                      {isService ? "Service" : `${stock} ${product.base_unit} in stock`}
                     </p>
 
                     <p className="mt-2 text-orange-400">
@@ -434,15 +400,13 @@ export default function SalesPage() {
           <div className="mt-5 space-y-3">
             {cart.map((item, index) => {
               const units = unitsFor(item.product);
-              const selectedUnit = units.find(
-                (unit) => unit.name === item.unitName,
-              );
+              const selectedUnit = units.find((unit) => unit.id === item.unitId);
               const baseQuantity =
-                Number(selectedUnit?.baseQuantity ?? 1) * item.quantity;
+                Number(selectedUnit?.base_quantity ?? 1) * item.quantity;
 
               return (
                 <div
-                  key={`${item.product.id}-${item.unitName}`}
+                  key={`${item.product.id}-${item.unitId}`}
                   className="rounded-lg bg-white/5 p-3 text-sm"
                 >
                   <div className="flex justify-between gap-3">
@@ -463,24 +427,20 @@ export default function SalesPage() {
                   <label className="mt-3 block text-xs text-white/50">
                     Selling unit
                     <select
-                      value={item.unitName}
+                      value={String(item.unitId)}
                       onChange={(event) => {
                         const unit = units.find(
-                          (candidate) => candidate.name === event.target.value,
+                          (candidate) => candidate.id === Number(event.target.value),
                         );
-
                         if (unit) {
-                          updateCartItem(index, {
-                            unitName: unit.name,
-                            price: Number(unit.price),
-                          });
+                          updateCartItem(index, { unitId: unit.id, price: Number(unit.price) });
                         }
                       }}
                       className="field mt-1 w-full"
                     >
                       {units.map((unit) => (
-                        <option key={unit.name} value={unit.name}>
-                          {unit.name}
+                        <option key={unit.id} value={unit.id}>
+                          {unit.name} · {unit.base_quantity} {item.product.base_unit} · ₦{Number(unit.price).toLocaleString("en-NG")}
                         </option>
                       ))}
                     </select>
@@ -536,7 +496,7 @@ export default function SalesPage() {
                       min="0"
                       step="0.01"
                       value={item.price}
-                      disabled={item.product.itemType !== "SERVICE"}
+                      disabled={!isServiceProduct(item.product)}
                       onChange={(event) =>
                         updateCartItem(index, {
                           price: Number(event.target.value),
@@ -546,7 +506,7 @@ export default function SalesPage() {
                   </label>
 
                   <p className="mt-2 text-xs text-white/50">
-                    Base quantity: {baseQuantity}
+                    Conversion: {item.quantity} {selectedUnit?.name ?? "unit"} = {baseQuantity} {item.product.base_unit}
                   </p>
 
                   <p className="mt-1">

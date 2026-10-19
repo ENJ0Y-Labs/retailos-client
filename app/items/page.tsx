@@ -13,16 +13,18 @@ export default function ItemsPage() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
 
-  async function load() {
-    try {
-      const storeId = user?.store_id;
-      if (!storeId) throw new Error("No store is associated with this account");
-      const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
-      setProducts(data.products);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load products");
-    }
-  }
+  useEffect(() => {
+    void Promise.resolve().then(async () => {
+      try {
+        const storeId = user?.store_id;
+        if (!storeId) throw new Error("No store is associated with this account");
+        const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
+        setProducts(data.products);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unable to load products");
+      }
+    });
+  }, [user]);
 
   async function viewProduct(id: number) {
     try {
@@ -36,8 +38,6 @@ export default function ItemsPage() {
       setError(e instanceof Error ? e.message : "Unable to load product");
     }
   }
-
-  useEffect(() => { load(); }, [user?.store_id]);
 
   const filtered = products.filter((product) =>
     product.name.toLowerCase().includes(query.toLowerCase()),

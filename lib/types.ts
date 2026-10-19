@@ -16,13 +16,26 @@ export type User = {
   created_at: string;
 };
 
+export type ProductType = "Physical" | "Service";
+
+export type ProductUnit = {
+  id: number;
+  product_id: number;
+  name: string;
+  base_quantity: number;
+  price: string | number;
+};
+
 export type Product = {
   id: number;
   store_id: number;
   name: string;
-  price: string;
+  product_type: ProductType;
+  base_unit: string;
+  price: string | number;
   stock_quantity: number;
   low_stock_threshold: number | null;
+  units: ProductUnit[];
   created_at: string;
   updated_at: string;
 };
