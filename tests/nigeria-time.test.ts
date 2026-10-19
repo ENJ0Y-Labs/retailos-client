@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatNigeriaDate, formatNigeriaDateTime } from "../lib/nigeria-time.ts";
+import { formatNigeriaDate, formatNigeriaDateTime } from "../lib/nigeria-time-core.mjs";
 
 test("formats timestamps in Africa/Lagos rather than UTC", () => {
   const formatted = formatNigeriaDateTime("2026-10-19T00:00:00.000Z");
