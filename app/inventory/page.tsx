@@ -96,7 +96,6 @@ export default function InventoryPage() {
         store_id: id,
         name: form.name.trim(),
         price: Number(form.price),
-        product_type: form.productType,
         base_unit: form.baseUnit.trim(),
         low_stock_threshold: form.threshold === "" ? null : Number(form.threshold),
       };
@@ -109,7 +108,11 @@ export default function InventoryPage() {
       } else {
         await api("/product/create", {
           method: "POST",
-          json: { ...commonPayload, opening_stock: Number(form.stock) },
+          json: {
+            ...commonPayload,
+            product_type: form.productType,
+            opening_stock: Number(form.stock),
+          },
         });
         setMessage("Product created.");
       }
