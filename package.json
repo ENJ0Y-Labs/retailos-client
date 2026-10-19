@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --experimental-strip-types --test tests/nigeria-time.test.ts"
+    "test": "node --test tests/nigeria-time.test.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.0",
