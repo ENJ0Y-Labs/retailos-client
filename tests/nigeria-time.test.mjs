@@ -17,5 +17,5 @@ test("formats the backend reporting date without shifting its calendar day", () 
 test("converts UTC timestamps across midnight into the Lagos reporting day", () => {
   const formatted = formatNigeriaDateTime("2026-10-18T23:30:00.000Z");
   assert.match(formatted, /19 Oct 2026/i);
-  assert.match(formatted, /12:30/i);
+  assert.match(formatted, /00:30/i);
 });
