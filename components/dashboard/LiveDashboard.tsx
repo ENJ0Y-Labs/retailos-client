@@ -1,109 +1,134 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DashboardShell from "@/components/layout/DashboardShell";
-import {formatNigeriaDateTime} from "@/lib/nigeria-time";
 
-type User = { id:number; username:string; email:string; store_id:number|null; store_name?:string|null };
-type Dashboard = { products_count:number; low_stock_count:number; open_alerts_count:number; today_sales_count:number; today_sales_total:string };
-type Sale = { id:number; customer_id:number|null; total_amount:string; created_at:string };
+import { useAuth } from "@/components/auth/AuthProvider";
+import { api } from "@/lib/api";
+import type {
+  DailyBrief,
+  DashboardStats,
+  SaleSummary,
+  User,
+} from "@/types";
 
-export default function LiveDashboard({ role, user, title }: { role: Role; user: string; title: string }) {
-  const [data, setData] = useState<Data | null>(null);
-  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [error, setError] = useState("");
-  const [loading,setLoading]=useState(true);
+type DashboardResponse = {
+  stats: DashboardStats;
+  brief: DailyBrief | null;
+  sales: SaleSummary[];
+};
+
+export default function LiveDashboard() {
+  const { user } = useAuth();
+
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [brief, setBrief] = useState<DailyBrief | null>(null);
+  const [sales, setSales] = useState<SaleSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/dashboard").then(async (response) => {
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || "Unable to load dashboard");
-        return result as Data;
-      }),
-      fetch("/api/auth/me").then(async (response) => {
-        const result = await response.json();
-        return result.user as SessionUser | null;
-      }),
-    ])
-      .then(([dashboard, currentUser]) => {
-        setData(dashboard);
-        setSessionUser(currentUser);
-      })
-      .catch((caught) => setError(caught instanceof Error ? caught.message : "Unable to load dashboard")).finally(()=>setLoading(false));
+    let cancelled = false;
+
+    async function loadDashboard() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await api.get<DashboardResponse>("/dashboard");
+
+        if (cancelled) return;
+
+        setStats(response.stats);
+        setBrief(response.brief ?? null);
+        setSales(response.sales ?? []);
+      } catch (err: unknown) {
+        if (cancelled) return;
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load dashboard data.",
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const displayUser = sessionUser?.fullName || user;
-  const money = (value: number | string) => `₦${Number(value).toLocaleString()}`;
+  if (loading) {
+    return (
+      <section aria-live="polite" aria-busy="true">
+        <p>Loading dashboard...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section role="alert">
+        <h2>Dashboard unavailable</h2>
+        <p>{error}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </section>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <section>
+        <p>Dashboard data is unavailable.</p>
+      </section>
+    );
+  }
 
   return (
-    <DashboardShell role={role} user={displayUser} title={title}>
-      {loading&&<p role="status" className="mb-4 text-sm text-white/75">Connecting to your store and loading live data. This may take a moment.</p>}
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <Metric title="Today's Sales" value={money(data?.stats.todaySales || 0)} />
-        <Metric title="Transactions" value={String(data?.stats.todayTransactions || 0)} />
-        <Metric title="Products" value={String(data?.stats.count || 0)} />
-        <Metric title="Stock Units" value={String(data?.stats.units || 0)} />
-      </div>
-      {error && <p className="mt-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <Section title={role === "employee" ? "Alerts" : "Store Health"}>
-          {data?.lowStock.length ? (
-            <div className="space-y-2">
-              {data.lowStock.map((product) => (
-                <div key={product.id} className="flex justify-between rounded-lg bg-orange-500/5 p-3 text-sm">
-                  <span>{product.name}</span>
-                  <span className="text-orange-400">{product.stockQuantity} left</span>
-                </div>
-              ))}
-            </div>
-          ) : <p className="text-sm text-white/40">No low-stock alerts.</p>}
-        </Section>
-        <Section title="Quick Actions">
-          <div className="flex flex-wrap gap-3">
-            <Link href="/sales" className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">+ Add Sale</Link>
-            {role !== "employee" && <Link href="/purchases" className="rounded-xl bg-white/10 px-4 py-3 text-sm">+ Add Purchase</Link>}
-            {role === "admin" && <Link href="/users" className="rounded-xl bg-white/10 px-4 py-3 text-sm">+ Add User</Link>}
-          </div>
-        </Section>
-        <Section title="Recent Transactions" className="lg:col-span-2">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-white/40"><tr>{["DATE", "REF", "AMOUNT", "PAYMENT", "STATUS", "STAFF"].map((heading) => <th key={heading} className="px-3 py-3">{heading}</th>)}</tr></thead>
-              <tbody>
-                {data?.recent.length ? data.recent.map((transaction) => (
-                  <tr key={transaction.receiptNo} className="border-t border-white/5">
-                    <td className="px-3 py-3">{formatNigeriaDateTime(transaction.createdAt)}</td>
-                    <td className="px-3 py-3">{transaction.receiptNo}</td>
-                    <td className="px-3 py-3">{money(transaction.amount)}</td>
-                    <td className="px-3 py-3">{transaction.payment}</td>
-                    <td className="px-3 py-3">{transaction.status}</td>
-                    <td className="px-3 py-3">{transaction.employeeName}</td>
-                  </tr>
-                )) : <tr><td colSpan={6} className="px-3 py-10 text-center text-white/30">No transactions yet.</td></tr>}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-        {role !== "employee" && <Section title="Activity Feed">
-          <div className="space-y-2">
-            {data?.activity.length ? data.activity.map((item, index) => (
-              <div key={`${item.createdAt}-${index}`} className="flex justify-between rounded-lg bg-white/5 p-3 text-sm">
-                <span>{item.userName} · {item.action} {item.entity.toLowerCase()}</span>
-                <span className="text-white/30">{formatNigeriaDateTime(item.createdAt)}</span>
-              </div>
-            )) : <p className="text-sm text-white/40">No activity yet.</p>}
-          </div>
-        </Section>}
-      </div>
-    </DashboardShell>
+    <main>
+      <header>
+        <h1>Dashboard</h1>
+        <p>
+          Welcome{user?.name ? `, ${user.name}` : ""}.
+        </p>
+      </header>
+
+      <section aria-labelledby="dashboard-summary">
+        <h2 id="dashboard-summary">Business summary</h2>
+
+        {/* Render the metrics using the actual DashboardStats fields. */}
+        <pre>{JSON.stringify(stats, null, 2)}</pre>
+      </section>
+
+      <section aria-labelledby="daily-brief">
+        <h2 id="daily-brief">Daily Business Brief</h2>
+
+        {brief ? (
+          <pre>{JSON.stringify(brief, null, 2)}</pre>
+        ) : (
+          <p>Today's business brief is not available.</p>
+        )}
+      </section>
+
+      <section aria-labelledby="recent-sales">
+        <h2 id="recent-sales">Recent sales</h2>
+
+        {sales.length > 0 ? (
+          <pre>{JSON.stringify(sales, null, 2)}</pre>
+        ) : (
+          <p>No sales have been recorded yet.</p>
+        )}
+      </section>
+    </main>
   );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return <div className="rounded-2xl border border-white/10 bg-[#151515] p-5"><p className="text-xs text-white/40">{title}</p><p className="mt-2 text-2xl font-semibold">{value}</p></div>;
-}
-
-function Section({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return <section className={`rounded-2xl border border-white/10 bg-[#151515] p-5 ${className}`}><h2 className="mb-4 font-semibold">{title}</h2>{children}</section>;
 }

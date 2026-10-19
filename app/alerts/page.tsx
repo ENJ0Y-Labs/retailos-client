@@ -8,6 +8,12 @@ import type { Alert } from "@/lib/types";
 
 export default function AlertsPage() {
   const { user } = useAuth();
+  const currentUser = user as (typeof user & { role?: string });
+  const role =
+    currentUser?.role === "admin" || currentUser?.role === "manager"
+      ? currentUser.role
+      : "employee";
+
   const storeId = user?.store_id ?? null;
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [message, setMessage] = useState("");
@@ -63,7 +69,7 @@ export default function AlertsPage() {
   }
 
   return (
-    <DashboardShell title="Alerts">
+    <DashboardShell role={role} user={currentUser!} title="Alerts">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <p className="text-sm text-white/40">Open alerts from the server.</p>
         <button onClick={generate} className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Generate low-stock alerts</button>

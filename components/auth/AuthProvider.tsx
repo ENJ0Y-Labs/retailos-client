@@ -1,6 +1,14 @@
+
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
@@ -20,8 +28,12 @@ function Loader() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0b0b0b] text-white">
       <div className="text-center">
-        <p className="text-lg font-semibold">TX <span className="text-orange-500">RetailOS</span></p>
-        <p className="mt-2 text-sm text-white/40">Checking your session…</p>
+        <p className="text-lg font-semibold">
+          TX <span className="text-orange-500">RetailOS</span>
+        </p>
+        <p className="mt-2 text-sm text-white/40">
+          Checking your session…
+        </p>
       </div>
     </main>
   );
@@ -30,24 +42,28 @@ function Loader() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+
   const isPublic = PUBLIC_PATHS.includes(pathname);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(!isPublic);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (): Promise<User | null> => {
     try {
       const data = await api<{ user: User }>("/auth/me");
       setUser(data.user);
       return data.user;
     } catch (error) {
       setUser(null);
-      if (error instanceof ApiError && error.status === 401) router.replace("/login");
+
+      if (error instanceof ApiError && error.status === 401) {
+        router.replace("/login");
+      }
+
       return null;
     }
   }, [router]);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
       await api("/auth/logout", { method: "POST" });
     } finally {
@@ -58,27 +74,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [router]);
 
   useEffect(() => {
-    if (isPublic) return;
+    if (isPublic) {
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
 
-    refresh().finally(() => {
-      if (!cancelled) setLoading(false);
+    setLoading(true);
+
+    void refresh().finally(() => {
+      if (!cancelled) {
+        setLoading(false);
+      }
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isPublic, refresh]);
 
-  const value = useMemo(() => ({ user, loading, refresh, logout }), [user, loading, refresh, logout]);
+  const value = useMemo(
+    () => ({ user, loading, refresh, logout }),
+    [user, loading, refresh, logout],
+  );
 
-  if (!isPublic && loading) return <Loader />;
-  if (!isPublic && !user) return null;
+  if (!isPublic && loading) {
+    return <Loader />;
+  }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  if (!isPublic && !user) {
+    return null;
+  }
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
   const value = useContext(AuthContext);
-  if (!value) throw new Error("useAuth must be used inside AuthProvider");
+
+  if (!value) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
   return value;
 }
