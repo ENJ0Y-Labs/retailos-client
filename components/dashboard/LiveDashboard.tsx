@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
-import { api } from "@/lib/api";
-import type { DashboardStats, DailyBrief, DailySummary, SaleSummary } from "@/lib/types";
+import {formatNigeriaDateTime} from "@/lib/nigeria-time";
 
 export default function LiveDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -11,56 +10,84 @@ export default function LiveDashboard() {
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [sales, setSales] = useState<SaleSummary[]>([]);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading,setLoading]=useState(true);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const me = await api<{ user: { store_id: number | null } }>("/auth/me");
-        if (!me.user.store_id) throw new Error("No store is associated with this account");
-        const id = me.user.store_id;
-
-        const [dashboard, dailySummary, dailyBrief, salesData] = await Promise.all([
-          api<DashboardStats>("/dashboard?store_id=" + id),
-          api<DailySummary>("/dashboard/daily-summary?store_id=" + id),
-          api<DailyBrief>("/dashboard/daily-brief?store_id=" + id),
-          api<{ sales: SaleSummary[] }>("/sales?store_id=" + id),
-        ]);
-
-        setStats(dashboard);
-        setSummary(dailySummary);
-        setBrief(dailyBrief);
-        setSales(salesData.sales.slice(0, 5));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Unable to load dashboard");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    Promise.all([
+      fetch("/api/dashboard").then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Unable to load dashboard");
+        return result as Data;
+      }),
+      fetch("/api/auth/me").then(async (response) => {
+        const result = await response.json();
+        return result.user as SessionUser | null;
+      }),
+    ])
+      .then(([dashboard, currentUser]) => {
+        setData(dashboard);
+        setSessionUser(currentUser);
+      })
+      .catch((caught) => setError(caught instanceof Error ? caught.message : "Unable to load dashboard")).finally(()=>setLoading(false));
   }, []);
 
   const money = (value: string | number) => "₦" + Number(value).toLocaleString();
 
   return (
-    <DashboardShell title="Dashboard">
-      {error && <p className="mb-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      {loading ? (
-        <p className="py-16 text-center text-white/30">Loading store data…</p>
-      ) : (
-        <>
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            <Metric title="Today's sales" value={money(stats?.today_sales_total || 0)} />
-            <Metric title="Today's transactions" value={String(stats?.today_sales_count || 0)} />
-            <Metric title="Products" value={String(stats?.products_count || 0)} />
-            <Metric title="Open alerts" value={String(stats?.open_alerts_count || 0)} />
+    <DashboardShell role={role} user={displayUser} title={title}>
+      {loading&&<p role="status" className="mb-4 text-sm text-white/75">Connecting to your store and loading live data. This may take a moment.</p>}
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <Metric title="Today's Sales" value={money(data?.stats.todaySales || 0)} />
+        <Metric title="Transactions" value={String(data?.stats.todayTransactions || 0)} />
+        <Metric title="Products" value={String(data?.stats.count || 0)} />
+        <Metric title="Stock Units" value={String(data?.stats.units || 0)} />
+      </div>
+      {error && <p className="mt-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Section title={role === "employee" ? "Alerts" : "Store Health"}>
+          {data?.lowStock.length ? (
+            <div className="space-y-2">
+              {data.lowStock.map((product) => (
+                <div key={product.id} className="flex justify-between rounded-lg bg-orange-500/5 p-3 text-sm">
+                  <span>{product.name}</span>
+                  <span className="text-orange-400">{product.stockQuantity} left</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-sm text-white/40">No low-stock alerts.</p>}
+        </Section>
+        <Section title="Quick Actions">
+          <div className="flex flex-wrap gap-3">
+            <Link href="/sales" className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">+ Add Sale</Link>
+            {role !== "employee" && <Link href="/purchases" className="rounded-xl bg-white/10 px-4 py-3 text-sm">+ Add Purchase</Link>}
+            {role === "admin" && <Link href="/users" className="rounded-xl bg-white/10 px-4 py-3 text-sm">+ Add User</Link>}
           </div>
-
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
-            <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-              <h2 className="font-semibold">Daily summary</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Stat label="Sales count" value={summary?.sales_count ?? 0} />
-                <Stat label="Total sales" value={money(summary?.total_sales || 0)} />
+        </Section>
+        <Section title="Recent Transactions" className="lg:col-span-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-white/40"><tr>{["DATE", "REF", "AMOUNT", "PAYMENT", "STATUS", "STAFF"].map((heading) => <th key={heading} className="px-3 py-3">{heading}</th>)}</tr></thead>
+              <tbody>
+                {data?.recent.length ? data.recent.map((transaction) => (
+                  <tr key={transaction.receiptNo} className="border-t border-white/5">
+                    <td className="px-3 py-3">{formatNigeriaDateTime(transaction.createdAt)}</td>
+                    <td className="px-3 py-3">{transaction.receiptNo}</td>
+                    <td className="px-3 py-3">{money(transaction.amount)}</td>
+                    <td className="px-3 py-3">{transaction.payment}</td>
+                    <td className="px-3 py-3">{transaction.status}</td>
+                    <td className="px-3 py-3">{transaction.employeeName}</td>
+                  </tr>
+                )) : <tr><td colSpan={6} className="px-3 py-10 text-center text-white/30">No transactions yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+        {role !== "employee" && <Section title="Activity Feed">
+          <div className="space-y-2">
+            {data?.activity.length ? data.activity.map((item, index) => (
+              <div key={`${item.createdAt}-${index}`} className="flex justify-between rounded-lg bg-white/5 p-3 text-sm">
+                <span>{item.userName} · {item.action} {item.entity.toLowerCase()}</span>
+                <span className="text-white/30">{formatNigeriaDateTime(item.createdAt)}</span>
               </div>
             </section>
 
