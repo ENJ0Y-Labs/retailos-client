@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -17,6 +17,9 @@ export default function SalesPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [query, setQuery] = useState("");
   const [customerId, setCustomerId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Transfer" | "POS">("Cash");
+  const [transactionId, setTransactionId] = useState("");
+  const submittingRef = useRef(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -51,6 +54,7 @@ export default function SalesPage() {
   const total = useMemo(() => cart.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0), [cart]);
 
   function add(product: Product) {
+    setTransactionId("");
     setCart((items) => {
       const existing = items.find((item) => item.product.id === product.id);
       if (existing) {
@@ -63,6 +67,7 @@ export default function SalesPage() {
   }
 
   function change(productId: number, delta: number) {
+    setTransactionId("");
     setCart((items) => items.flatMap((item) => {
       if (item.product.id !== productId) return [item];
       const quantity = item.quantity + delta;
@@ -72,18 +77,22 @@ export default function SalesPage() {
   }
 
   async function createSale() {
-    if (!storeId || !cart.length) return;
+    if (!storeId || !cart.length || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setError("");
     setMessage("");
 
     try {
+      const saleTransactionId = transactionId || crypto.randomUUID();
+      if (!transactionId) setTransactionId(saleTransactionId);
       const data = await api<{ receipt: Receipt }>("/sales", {
         method: "POST",
         json: {
           store_id: storeId,
           customer_id: customerId ? Number(customerId) : null,
-          client_transaction_id: crypto.randomUUID(),
+          client_transaction_id: saleTransactionId,
+          payment_method: paymentMethod,
           items: cart.map((item) => ({ product_id: item.product.id, quantity: item.quantity })),
         },
       });
@@ -91,10 +100,13 @@ export default function SalesPage() {
       setMessage("Sale #" + data.receipt.sale_id + " completed.");
       setCart([]);
       setCustomerId("");
+      setPaymentMethod("Cash");
+      setTransactionId("");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to complete sale");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -154,9 +166,18 @@ export default function SalesPage() {
           <h2 className="font-semibold">Checkout</h2>
           <label className="mt-4 block">
             <span className="mb-2 block text-xs text-white/40">Customer (optional)</span>
-            <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="field">
+            <select value={customerId} onChange={(e) => { setCustomerId(e.target.value); setTransactionId(""); }} className="field">
               <option value="">Walk-in customer</option>
               {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+            </select>
+          </label>
+
+          <label className="mt-4 block">
+            <span className="mb-2 block text-xs text-white/40">Payment method</span>
+            <select value={paymentMethod} onChange={(e) => { setPaymentMethod(e.target.value as "Cash" | "Transfer" | "POS"); setTransactionId(""); }} className="field" disabled={submitting}>
+              <option value="Cash">Cash</option>
+              <option value="Transfer">Transfer</option>
+              <option value="POS">POS</option>
             </select>
           </label>
 
