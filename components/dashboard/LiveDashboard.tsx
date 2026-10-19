@@ -116,7 +116,7 @@ export default function LiveDashboard() {
         {brief ? (
           <pre>{JSON.stringify(brief, null, 2)}</pre>
         ) : (
-          <p>Today's business brief is not available.</p>
+          <p>Today&apos;s business brief is not available.</p>
         )}
       </section>
 
