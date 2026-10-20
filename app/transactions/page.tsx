@@ -58,7 +58,7 @@ export default function TransactionsPage() {
   }, [storeId, paymentMethod]);
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(() => load());
   }, [load]);
 
   const visibleRows = useMemo(() => {
