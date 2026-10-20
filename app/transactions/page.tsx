@@ -1,5 +1,180 @@
 "use client";
-import { useEffect, useState } from "react";
-import {formatNigeriaDateTime} from "@/lib/nigeria-time";
-type Sale={id:string;receiptNo:string;totalAmount:number|string;payment:string;status:string;createdAt:string;employeeName:string;amountPaid:number|string;balance:number|string;items:{name:string;unit:string;quantity:number;baseQuantity:number;price:number}[]};
-export default function TransactionsPage(){const [q,setQ]=useState("");const [status,setStatus]=useState("");const [payment,setPayment]=useState("");const [rows,setRows]=useState<Sale[]>([]);const [message,setMessage]=useState("");const [loading,setLoading]=useState(true);async function load(){setLoading(true);const params=new URLSearchParams();if(q)params.set("search",q);if(status)params.set("status",status);if(payment)params.set("payment",payment);try{const r=await fetch(`/api/sales?${params}`);const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load transactions");setRows(d.sales)}catch(e){setMessage(e instanceof Error?e.message:"Unable to load transactions")}finally{setLoading(false)}}useEffect(()=>{const t=setTimeout(load,250);return()=>clearTimeout(t)},[q,status,payment]);async function cancel(id:string){if(!confirm("Cancel this sale? Stock will be restored."))return;const r=await fetch("/api/sales",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to cancel sale");return}setMessage("Sale cancelled.");load()}return <main className="min-h-screen bg-[#0b0b0b] p-5 text-white md:p-8"><div className="mx-auto max-w-6xl"><h1 className="text-2xl font-semibold">Sales History & Transactions</h1>{message&&<p className="mt-4 rounded-xl bg-white/5 p-3 text-sm text-orange-300">{message}</p>}<div className="mt-6 grid gap-3 md:grid-cols-3"><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search by receipt number..." className="field"/><select value={status} onChange={e=>setStatus(e.target.value)} className="field"><option value="">All statuses</option><option value="COMPLETED">Completed</option><option value="CANCELLED">Cancelled</option></select><select value={payment} onChange={e=>setPayment(e.target.value)} className="field"><option value="">All payment methods</option><option value="CASH">Cash</option><option value="TRANSFER">Transfer</option><option value="POS">POS</option></select></div><div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5"><table className="w-full text-left text-sm"><thead className="text-xs text-white/40"><tr>{["DATE","RECEIPT","AMOUNT","PAYMENT","STATUS","EMPLOYEE","ACTION"].map(x=><th key={x} className="px-3 py-3">{x}</th>)}</tr></thead><tbody>{loading?<tr><td colSpan={7} className="px-3 py-10 text-center text-white/30">Loading...</td></tr>:rows.map(r=><tr key={r.id} className="border-t border-white/5"><td className="px-3 py-4">{formatNigeriaDateTime(r.createdAt)}</td><td className="px-3 py-4"><strong>{r.receiptNo}</strong><div className="mt-2 text-xs text-white/70">{(r.items||[]).map((i,j)=><p key={j}>{i.name}: {i.quantity} {i.unit} ({i.baseQuantity} base units) · ₦{Number(i.price).toLocaleString()}</p>)}</div></td><td className="px-3 py-4">₦{Number(r.totalAmount).toLocaleString()}<p className="text-xs text-white/70">Paid: ₦{Number(r.amountPaid).toLocaleString()}</p><p className="text-xs text-orange-300">Balance: ₦{Number(r.balance).toLocaleString()}</p></td><td className="px-3 py-4">{r.payment}</td><td className="px-3 py-4"><span className={`rounded-full px-2 py-1 text-xs ${r.status==="COMPLETED"?"bg-green-500/10 text-green-400":"bg-red-500/10 text-red-400"}`}>{r.status}</span></td><td className="px-3 py-4">{r.employeeName}</td><td className="px-3 py-4">{r.status==="COMPLETED"&&<button onClick={()=>cancel(r.id)} className="text-red-400">Cancel</button>}</td></tr>)}{!loading&&!rows.length&&<tr><td colSpan={7} className="px-3 py-10 text-center text-white/30">No transactions found.</td></tr>}</tbody></table></div></div></main>}
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { api } from "@/lib/api";
+import { formatNigeriaDateTime } from "@/lib/nigeria-time";
+import type { Receipt } from "@/lib/types";
+
+type SaleRow = {
+  id: number;
+  client_transaction_id: string | null;
+  customer_id: number | null;
+  total_amount: string;
+  amount_paid: string;
+  balance: string;
+  payment_method: "Cash" | "Transfer" | "POS";
+  created_at: string;
+};
+
+const money = (value: string | number) =>
+  "₦" + Number(value).toLocaleString("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+export default function TransactionsPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
+  const [query, setQuery] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [rows, setRows] = useState<SaleRow[]>([]);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!storeId) {
+      setRows([]);
+      setError("No store is associated with this account.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ store_id: String(storeId) });
+      if (paymentMethod) params.set("payment_method", paymentMethod);
+      const data = await api<{ sales: SaleRow[] }>(`/sales?${params.toString()}`);
+      setRows(Array.isArray(data.sales) ? data.sales : []);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load transactions.");
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId, paymentMethod]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const visibleRows = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter((sale) =>
+      String(sale.id).includes(term) ||
+      (sale.client_transaction_id ?? "").toLowerCase().includes(term),
+    );
+  }, [rows, query]);
+
+  async function showDetails(id: number) {
+    if (!storeId) return;
+    setDetailsLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ id: String(id), store_id: String(storeId) });
+      const data = await api<{ receipt: Receipt }>(`/sales/get?${params.toString()}`);
+      setSelectedReceipt(data.receipt);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load sale details.");
+    } finally {
+      setDetailsLoading(false);
+    }
+  }
+
+  return (
+    <DashboardShell title="Transactions">
+      {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+
+      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <div className="mb-5 grid gap-3 md:grid-cols-2">
+          <input
+            aria-label="Search transactions"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by sale ID or transaction ID"
+            className="field"
+          />
+          <select
+            aria-label="Filter by payment method"
+            value={paymentMethod}
+            onChange={(event) => setPaymentMethod(event.target.value)}
+            className="field"
+          >
+            <option value="">All payment methods</option>
+            <option value="Cash">Cash</option>
+            <option value="Transfer">Transfer</option>
+            <option value="POS">POS</option>
+          </select>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-white/40">
+              <tr>
+                {["DATE", "SALE", "TOTAL", "PAYMENT", "PAID", "BALANCE", "DETAILS"].map((heading) =>
+                  <th key={heading} className="px-3 py-3">{heading}</th>,
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={7} className="px-3 py-10 text-center text-white/40">Loading transactions…</td></tr>
+              ) : visibleRows.map((sale) => (
+                <tr key={sale.id} className="border-t border-white/5">
+                  <td className="px-3 py-4">{formatNigeriaDateTime(sale.created_at)}</td>
+                  <td className="px-3 py-4">
+                    <strong>#{sale.id}</strong>
+                    {sale.client_transaction_id && <p className="mt-1 text-xs text-white/40">{sale.client_transaction_id}</p>}
+                  </td>
+                  <td className="px-3 py-4">{money(sale.total_amount)}</td>
+                  <td className="px-3 py-4">{sale.payment_method}</td>
+                  <td className="px-3 py-4">{money(sale.amount_paid)}</td>
+                  <td className="px-3 py-4">{money(sale.balance)}</td>
+                  <td className="px-3 py-4">
+                    <button type="button" onClick={() => void showDetails(sale.id)} className="rounded bg-white/10 px-3 py-2 text-xs">
+                      View receipt
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!loading && visibleRows.length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-10 text-center text-white/40">No transactions found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {detailsLoading && <p role="status" className="mt-4 text-sm text-white/50">Loading sale details…</p>}
+      {selectedReceipt && (
+        <section className="mt-6 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-semibold">Sale #{selectedReceipt.sale_id}</h2>
+              <p className="mt-1 text-sm text-white/50">{formatNigeriaDateTime(selectedReceipt.created_at)}</p>
+            </div>
+            <button type="button" onClick={() => setSelectedReceipt(null)} className="text-sm text-white/50">Close</button>
+          </div>
+          <div className="mt-4 space-y-2">
+            {selectedReceipt.items.map((item, index) => (
+              <div key={`${item.product_id}-${index}`} className="flex justify-between gap-4 border-b border-white/5 py-2 text-sm">
+                <span>Product #{item.product_id} · {item.quantity} {item.unit_name ?? ""}</span>
+                <span>{money(item.total)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 space-y-1 text-sm">
+            <p>Total: {money(selectedReceipt.total_amount)}</p>
+            <p>Paid: {money(selectedReceipt.amount_paid)}</p>
+            <p>Balance: {money(selectedReceipt.balance)}</p>
+          </div>
+          <pre className="mt-4 whitespace-pre-wrap rounded-lg bg-black/30 p-3 text-xs text-white/60">{selectedReceipt.printable_text}</pre>
+        </section>
+      )}
+    </DashboardShell>
+  );
+}
