@@ -16,7 +16,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 // Public pages must render without an API session check. In particular, the root
 // landing page is the first touchpoint for prospects and must not be gated.
-const PUBLIC_PATHS = ["/", "/login", "/register"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/demo"];
 
 function Loader() {
   return (
