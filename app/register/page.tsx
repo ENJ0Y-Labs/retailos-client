@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +32,7 @@ export default function RegisterPage() {
         method: "POST",
         json: { username, email, password },
       });
-      window.location.href = "/login";
+      router.push("/login");
     } catch (err) {
       if (err instanceof ApiError && err.fields) setFieldErrors(err.fields);
       setError(err instanceof Error ? err.message : "Unable to create account");

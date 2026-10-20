@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "node --test tests/nigeria-time.test.mjs"
+    "test": "node --test"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.0.0",
@@ -23,5 +23,8 @@
     "eslint-config-next": "^16.3.5",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true
   }
 }
