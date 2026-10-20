@@ -98,12 +98,24 @@ function downloadTemplate() {
 
 export default function CsvImport({ storeId, onImported }: { storeId: number | null; onImported: () => Promise<void> }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  // Monotonic counter used as a cache-busting token. It avoids the impure
+  // `Date.now()` call, which React forbids during render, while still making
+  // every catalogue check a distinct request.
+  const requestCounter = useRef(0);
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
+
+  async function fetchCatalogue(): Promise<{ products: Product[] }> {
+    requestCounter.current += 1;
+    return api<{ products: Product[] }>(
+      "/product/list?store_id=" + storeId + "&_import_check=" + requestCounter.current,
+      { refresh: true },
+    );
+  }
 
   async function chooseFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -114,7 +126,7 @@ export default function CsvImport({ storeId, onImported }: { storeId: number | n
     if (file.size > 2 * 1024 * 1024) { setError("CSV must be 2 MB or smaller."); return; }
     try {
       if (!storeId) throw new Error("Your account has no store attached.");
-      const existingData = await api<{ products: Product[] }>("/product/list?store_id=" + storeId + "&_import_check=" + Date.now());
+      const existingData = await fetchCatalogue();
       setParsed(parseCsv(await file.text(), existingData.products));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to read this CSV.");
@@ -136,7 +148,7 @@ export default function CsvImport({ storeId, onImported }: { storeId: number | n
         try {
           // Refresh before each write. If a prior request committed but its response was lost,
           // the retry sees the product name and will not create a second copy.
-          const current = await api<{ products: Product[] }>("/product/list?store_id=" + storeId + "&_import_check=" + Date.now());
+          const current = await fetchCatalogue();
           const exists = current.products.some((product) => product.name.trim().toLocaleLowerCase() === row.name.trim().toLocaleLowerCase());
           if (exists) {
             skipped++;
@@ -150,7 +162,7 @@ export default function CsvImport({ storeId, onImported }: { storeId: number | n
         } catch (e) {
           // A failed response can mean the server committed the write. Verify before reporting failure.
           try {
-            const after = await api<{ products: Product[] }>("/product/list?store_id=" + storeId + "&_import_check=" + Date.now());
+            const after = await fetchCatalogue();
             if (after.products.some((product) => product.name.trim().toLocaleLowerCase() === row.name.trim().toLocaleLowerCase())) {
               skipped++;
               continue;
@@ -169,7 +181,7 @@ export default function CsvImport({ storeId, onImported }: { storeId: number | n
       setSummary(notes.join(" "));
       if (failures.length) setError(failures.join("\n"));
       // Refresh preview against the new catalogue so a repeated import cannot recreate successful rows.
-      const latest = await api<{ products: Product[] }>("/product/list?store_id=" + storeId + "&_import_check=" + Date.now());
+      const latest = await fetchCatalogue();
       setParsed((current) => current ? {
         ...current,
         rows: current.rows.map((row) => {
