@@ -111,7 +111,7 @@ export default function DemoPage() {
 
         <section className="mb-6 rounded-2xl border border-orange-500/30 bg-orange-500/[0.07] p-5">
           <h1 className="text-2xl font-semibold sm:text-3xl">Try a sale in your demo shop</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Explore a sample provision-store catalogue, add items to the cart, and complete a pretend cash sale. This sandbox runs only in this page's memory. It does not call the RetailOS API or change real store records.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">Explore a sample provision-store catalogue, add items to the cart, and complete a pretend cash sale. This sandbox runs only in this page&apos;s memory. It does not call the RetailOS API or change real store records.</p>
         </section>
 
         <div className="mb-6 grid gap-3 sm:grid-cols-3">
