@@ -1,4 +1,87 @@
 "use client";
-import {useEffect,useState} from "react";
-type Debt={saleId:string;receiptNo:string;customerName:string;phone:string|null;totalAmount:string;amountPaid:string;balance:string};
-export default function Debts(){const [rows,setRows]=useState<Debt[]>([]),[msg,setMsg]=useState(""),[amounts,setAmounts]=useState<Record<string,string>>({}),[methods,setMethods]=useState<Record<string,string>>({});async function load(){const r=await fetch("/api/debts");const d=await r.json();if(r.ok)setRows(d.debts||[]);else setMsg(d.error)}useEffect(()=>{let cancelled=false;async function fetchDebts(){try{const r=await fetch("/api/debts");const d=await r.json();if(cancelled)return;if(r.ok)setRows(d.debts||[]);else setMsg(d.error||"Unable to load debts")}catch{if(!cancelled)setMsg("Unable to load debts")}}void fetchDebts();return()=>{cancelled=true}},[]);async function pay(d:Debt){const amount=Number(amounts[d.saleId]);if(!(amount>0)||amount>Number(d.balance))return setMsg("Enter a valid amount within the balance");if(!confirm("Record ₦"+amount+" payment for "+d.customerName+"?"))return;const r=await fetch("/api/debts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({saleId:d.saleId,amount,method:methods[d.saleId]||"CASH"})});const x=await r.json();setMsg(r.ok?"Payment recorded":x.error);if(r.ok){setAmounts({...amounts,[d.saleId]:""});load()}}return <main className="p-6 text-white"><h1 className="text-2xl font-bold">Who Owes Me</h1><p role="status" className="my-4 text-orange-300">{msg}</p><div className="space-y-4">{rows.map(d=><section key={d.saleId} className="rounded-xl border border-white/20 bg-[#151515] p-4"><h2 className="font-semibold">{d.customerName} — {d.receiptNo}</h2><p>{d.phone||"No phone"}</p><p>Total: ₦{Number(d.totalAmount).toLocaleString()} · Paid: ₦{Number(d.amountPaid).toLocaleString()} · <strong>Owed: ₦{Number(d.balance).toLocaleString()}</strong></p><div className="mt-3 flex flex-wrap gap-2"><input aria-label="Repayment amount" type="number" min="0.01" step="0.01" max={d.balance} className="field" placeholder="Amount received" value={amounts[d.saleId]||""} onChange={e=>setAmounts({...amounts,[d.saleId]:e.target.value})}/><select aria-label="Payment method" className="field" value={methods[d.saleId]||"CASH"} onChange={e=>setMethods({...methods,[d.saleId]:e.target.value})}><option>CASH</option><option>TRANSFER</option><option>POS</option></select><button className="rounded bg-orange-500 px-4 text-black" onClick={()=>pay(d)}>Record payment</button></div></section>)}{!rows.length&&<p>No outstanding balances found.</p>}</div></main>}
+
+import { useCallback, useEffect, useState } from "react";
+import DashboardShell from "@/components/layout/DashboardShell";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { api } from "@/lib/api";
+
+type OwingCustomer = {
+  id: number;
+  name: string;
+  contact: string | null;
+  outstanding_balance: string;
+};
+
+const money = (value: string | number) =>
+  "₦" + Number(value).toLocaleString("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+export default function DebtsPage() {
+  const { user } = useAuth();
+  const storeId = user?.store_id ?? null;
+  const [customers, setCustomers] = useState<OwingCustomer[]>([]);
+  const [totalOutstanding, setTotalOutstanding] = useState("0.00");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!storeId) {
+      setCustomers([]);
+      setError("No store is associated with this account.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api<{ customers: OwingCustomer[]; total_outstanding: string }>(
+        `/customers/owes?store_id=${encodeURIComponent(String(storeId))}`,
+      );
+      setCustomers(Array.isArray(data.customers) ? data.customers : []);
+      setTotalOutstanding(data.total_outstanding ?? "0.00");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to load outstanding balances.");
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <DashboardShell title="Who Owes Me">
+      {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+      <section className="mb-5 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
+        <p className="text-sm text-white/50">Total outstanding</p>
+        <p className="mt-2 text-2xl font-semibold text-orange-400">{money(totalOutstanding)}</p>
+      </section>
+      <section className="space-y-3">
+        {loading ? (
+          <p className="py-10 text-center text-white/40">Loading outstanding balances…</p>
+        ) : customers.map((customer) => (
+          <article key={customer.id} className="rounded-xl border border-white/10 bg-[#151515] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">{customer.name}</h2>
+                <p className="mt-1 text-sm text-white/50">{customer.contact || "No contact recorded"}</p>
+                <p className="mt-1 text-xs text-white/35">Customer #{customer.id}</p>
+              </div>
+              <p className="font-semibold text-orange-300">{money(customer.outstanding_balance)}</p>
+            </div>
+          </article>
+        ))}
+        {!loading && customers.length === 0 && !error && (
+          <p className="py-10 text-center text-white/40">No outstanding customer balances.</p>
+        )}
+      </section>
+      <p className="mt-5 text-xs text-white/40">
+        This view is read-only. The current API can list outstanding customer balances but does not provide a repayment-recording endpoint.
+      </p>
+    </DashboardShell>
+  );
+}
