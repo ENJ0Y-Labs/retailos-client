@@ -64,3 +64,15 @@ test("protected API 401s send the user to an expired-session login", () => {
   const login = source("app/login/page.tsx");
   assert.match(login, /Your session expired/);
 });
+
+test("navigation contains only implemented routes and does not filter by unsupported roles", () => {
+  const shell = source("components/layout/DashboardShell.tsx");
+  for (const route of ["/dashboard", "/sales", "/inventory", "/transactions", "/customers", "/debts", "/settings"]) {
+    assert.ok(shell.includes(`href: "${route}"`), `missing navigation route ${route}`);
+  }
+  for (const route of ["/purchases", "/report", "/users", "/notification"]) {
+    assert.ok(!shell.includes(route), `unsupported navigation route remains: ${route}`);
+  }
+  assert.doesNotMatch(shell, /ADMIN_ROLES|MANAGEMENT_ROLES|ALL_ROLES|activeRole|item\.roles/);
+  assert.doesNotMatch(shell, /href="\/notification"/);
+});
