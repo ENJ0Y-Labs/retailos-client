@@ -62,7 +62,7 @@ Purchases, reports, employee roles, and notification APIs were removed from the 
 
 ## API contract
 
-The frontend calls the server directly with `credentials: include` so the Flask session cookie remains HttpOnly.
+The browser uses one same-origin request strategy: it calls `/api/*` on the Next.js origin, and the Next.js rewrite forwards requests to the Flask API. The browser therefore does not depend on third-party-cookie behavior.
 
 Examples:
 
@@ -85,4 +85,4 @@ Examples:
 
 ## Production API and session cookies
 
-In Vercel, set `NEXT_PUBLIC_API_URL=/api`. Next.js rewrites `/api/*` requests to the Flask API while keeping browser requests on the Vercel origin. This lets the browser store the session cookie as a first-party cookie instead of relying on cross-site cookie behavior. Keep the local development value in `.env.local` as `NEXT_PUBLIC_API_URL=http://localhost:5000`; do not commit `.env.local`.
+Set `RETAILOS_API_ORIGIN` to the upstream Flask origin in `.env.local` for development and in the Vercel runtime environment for production. For example, local development can use `http://127.0.0.1:5000` and production can use the deployed HTTPS API origin. Browser requests always use `/api`; do not set `NEXT_PUBLIC_API_URL`. The rewrite keeps the browser request on the frontend origin. A protected API `401` redirects to `/login?reason=session-expired`, where the user sees an explanation. Server/network failures during initial session verification show a retry screen rather than silently treating the user as logged out.
