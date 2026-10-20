@@ -50,12 +50,12 @@ export default function Home() {
             <Link href="/register" className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-semibold text-black transition hover:bg-orange-400">
               Get started <span aria-hidden="true" className="ml-2">→</span>
             </Link>
-            <Link href="/login" className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5">
+            <Link href="/demo" className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5">
               Sign in to RetailOS
             </Link>
           </div>
           <p className="mt-4 text-xs leading-5 text-white/45">
-            New here? Create an account to get started. Existing users can sign in above.
+            Try the demo shop without creating an account, or register to set up your real store.
           </p>
         </div>
 
