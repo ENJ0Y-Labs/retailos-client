@@ -49,19 +49,14 @@ export default function SalesPage() {
   const checkoutLock = useRef(false);
 
   useEffect(() => {
-    let savedMethod: string | null = null;
     let pendingId: string | null = null;
     try {
-      savedMethod = localStorage.getItem("retailos-payment-method");
       pendingId = localStorage.getItem("retailos-pending-sale-id");
     } catch {
       // Storage may be unavailable in restricted browser environments.
     }
 
     void Promise.resolve().then(() => {
-      if (savedMethod && ["CASH", "TRANSFER", "POS"].includes(savedMethod)) {
-        setPaymentMethod(savedMethod);
-      }
       if (pendingId) setTransactionId(pendingId);
     });
   }, []);
@@ -550,7 +545,8 @@ export default function SalesPage() {
           </p>
 
           <div className="my-4">
-            <p className="mb-2 text-xs text-white/50">Payment method</p>
+            <p className="mb-1 text-xs text-white/50">Payment method</p>
+            <p className="mb-2 text-xs text-white/35">Record how the customer paid. No payment gateway is required; Cash is selected by default.</p>
 
             <div className="flex flex-wrap gap-2">
               {["CASH", "TRANSFER", "POS"].map((method) => (
@@ -559,12 +555,6 @@ export default function SalesPage() {
                   type="button"
                   onClick={() => {
                     setPaymentMethod(method);
-
-                    try {
-                      localStorage.setItem("retailos-payment-method", method);
-                    } catch {
-                      // Payment method remains selected in component state.
-                    }
                   }}
                   className={`rounded px-3 py-2 text-sm ${
                     paymentMethod === method
