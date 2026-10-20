@@ -29,6 +29,8 @@ export default function TransactionsPage() {
   const storeId = user?.store_id ?? null;
   const [query, setQuery] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [page, setPage] = useState(1);
+  const LIMIT = 20;
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState("");
@@ -47,6 +49,8 @@ export default function TransactionsPage() {
     setError("");
     try {
       const params = new URLSearchParams({ store_id: String(storeId) });
+      params.set("page", String(page));
+      params.set("limit", String(LIMIT));
       if (paymentMethod) params.set("payment_method", paymentMethod);
       const data = await api<{ sales: SaleRow[] }>(`/sales?${params.toString()}`);
       setRows(Array.isArray(data.sales) ? data.sales : []);
@@ -55,7 +59,7 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [storeId, paymentMethod]);
+  }, [storeId, paymentMethod, page]);
 
   useEffect(() => {
     void Promise.resolve().then(() => load());
@@ -94,14 +98,14 @@ export default function TransactionsPage() {
           <input
             aria-label="Search transactions"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => { setQuery(event.target.value); setPage(1); }}
             placeholder="Search by sale ID or transaction ID"
             className="field"
           />
           <select
             aria-label="Filter by payment method"
             value={paymentMethod}
-            onChange={(event) => setPaymentMethod(event.target.value)}
+            onChange={(event) => { setPaymentMethod(event.target.value); setPage(1); }}
             className="field"
           >
             <option value="">All payment methods</option>
@@ -147,6 +151,27 @@ export default function TransactionsPage() {
             </tbody>
           </table>
         </div>
+        {!loading && visibleRows.length > 0 && (
+          <div className="mt-4 flex items-center justify-between gap-2 text-sm text-white/60">
+            <button
+              type="button"
+              disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              className="px-3 py-1.5 rounded border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <span>Page {page}</span>
+            <button
+              type="button"
+              disabled={visibleRows.length < LIMIT}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-3 py-1.5 rounded border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </section>
 
       {detailsLoading && <p role="status" className="mt-4 text-sm text-white/50">Loading sale details…</p>}

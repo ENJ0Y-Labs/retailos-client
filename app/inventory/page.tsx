@@ -6,6 +6,7 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { InventoryMovement, Product, ProductType } from "@/lib/types";
+import CsvImport from "@/components/inventory/CsvImport";
 
 export default function InventoryPage() {
   const { user } = useAuth();
@@ -139,7 +140,7 @@ export default function InventoryPage() {
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
-      const data = await api<{ products: Product[] }>("/product/list?store_id=" + id);
+      const data = await api<{ products: Product[] }>("/product/list?store_id=" + id, { refresh: true });
       setProducts(data.products);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load inventory");
@@ -207,6 +208,7 @@ export default function InventoryPage() {
           {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
+      <CsvImport storeId={storeId} onImported={loadProducts} />
       <section className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
         <table className="w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">TYPE</th><th className="px-3 py-3">BASE UNIT</th><th className="px-3 py-3">SELLING UNITS</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>

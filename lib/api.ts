@@ -2,7 +2,24 @@ import type { ApiErrorBody } from "@/lib/types";
 
 // Browser requests use the same-origin Next.js proxy so the session cookie is
 // associated with the frontend origin in both development and production.
-const API_URL = "/api";
+// Set NEXT_PUBLIC_API_URL to call the Flask backend directly or via a
+// dedicated gateway (NGINX, Kong, AWS ALB) instead of the Next.js proxy.
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, "");
+
+// Simple in-memory cache for GET requests to reduce redundant backend calls.
+const GET_CACHE = new Map<string, { data: unknown; expiry: number }>();
+const CACHE_TTL_MS = 30_000;
+
+function getCached<T>(key: string): T | null {
+  const entry = GET_CACHE.get(key);
+  if (entry && Date.now() < entry.expiry) return entry.data as T;
+  GET_CACHE.delete(key);
+  return null;
+}
+
+function setCached<T>(key: string, data: T) {
+  GET_CACHE.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
+}
 
 export class ApiError extends Error {
   status: number;
@@ -18,18 +35,29 @@ export class ApiError extends Error {
   }
 }
 
-type ApiInit = RequestInit & { json?: unknown };
+type ApiInit = RequestInit & { json?: unknown; refresh?: boolean };
 
 export async function api<T = unknown>(path: string, init: ApiInit = {}): Promise<T> {
-  const headers = new Headers(init.headers);
-  if (init.json !== undefined) headers.set("Content-Type", "application/json");
+  // `refresh` bypasses the in-memory GET cache so callers can re-read the
+  // server state after a mutation without inventing a cache-busting query
+  // parameter on the backend contract.
+  const { refresh = false, ...rest } = init;
+  const headers = new Headers(rest.headers);
+  if (rest.json !== undefined) headers.set("Content-Type", "application/json");
+
+  const isGet = (rest.method ?? "GET") === "GET" && rest.json === undefined;
+  const cacheKey = isGet ? API_URL + path : null;
+  if (cacheKey && !refresh) {
+    const cached = getCached<T>(cacheKey);
+    if (cached !== null) return cached;
+  }
 
   const response = await fetch(API_URL + path, {
-    ...init,
+    ...rest,
     headers,
     credentials: "same-origin",
     cache: "no-store",
-    body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
+    body: rest.json !== undefined ? JSON.stringify(rest.json) : rest.body,
   });
 
   const body = await response.json().catch(() => ({}));
@@ -42,6 +70,10 @@ export async function api<T = unknown>(path: string, init: ApiInit = {}): Promis
       typeof window !== "undefined" &&
       !["/auth/login", "/auth/register", "/auth/me", "/auth/logout"].includes(path)
     ) {
+      // This helper is a plain module, so the App Router router is not
+      // available here. A full navigation is required so the app boots with a
+      // clean in-memory GET cache after the session is replaced.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/login?reason=session-expired");
     }
 
@@ -52,7 +84,9 @@ export async function api<T = unknown>(path: string, init: ApiInit = {}): Promis
     );
   }
 
-  return (body?.data ?? body) as T;
+  const result = (body?.data ?? body) as T;
+  if (cacheKey) setCached(cacheKey, result);
+  return result;
 }
 
 export const getApiUrl = () => API_URL;
