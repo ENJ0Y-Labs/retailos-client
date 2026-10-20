@@ -75,6 +75,10 @@ export type Receipt = {
   items: Array<{
     product_id: number;
     quantity: number;
+    unit_name?: string | null;
+    unit_base_quantity?: number;
+    base_quantity_deducted?: number;
+    base_unit?: string;
     price_at_sale?: string;
     total: string;
   }>;
