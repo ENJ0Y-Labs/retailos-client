@@ -140,7 +140,7 @@ export default function InventoryPage() {
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
-      const data = await api<{ products: Product[] }>("/product/list?store_id=" + id);
+      const data = await api<{ products: Product[] }>("/product/list?store_id=" + id + "&_refresh=" + Date.now());
       setProducts(data.products);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load inventory");
