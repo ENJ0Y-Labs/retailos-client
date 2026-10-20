@@ -71,6 +71,8 @@ export type Receipt = {
   sale_id: number;
   customer_id: number | null;
   total_amount: string;
+  amount_paid: string;
+  balance: string;
   created_at: string;
   items: Array<{
     product_id: number;
