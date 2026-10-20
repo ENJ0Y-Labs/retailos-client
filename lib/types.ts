@@ -109,7 +109,8 @@ export type DailyBrief = {
   sales: {
     today_total: string;
     yesterday_total: string;
-    change_percent: string;
+    change_percent: string | null;
+    comparison_available?: boolean;
     status: "UP" | "DOWN" | "STEADY";
   };
   alerts: Array<Pick<Alert, "id" | "type" | "message" | "product_id">>;
