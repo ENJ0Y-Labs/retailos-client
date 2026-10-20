@@ -45,8 +45,22 @@ test("settings page does not call unsupported store mutation routes", () => {
 
 test("shared API helper unwraps success data and surfaces structured errors", () => {
   const helper = source("lib/api.ts");
-  assert.match(helper, /credentials:\s*["']include["']/);
+  assert.match(helper, /credentials:\s*["\x27]same-origin["\x27]/);
   assert.match(helper, /body\?\.data\s*\?\?\s*body/);
   assert.match(helper, /body\?\.error\?\.message/);
   assert.match(helper, /body\?\.error\?\.code/);
+});
+
+test("Next.js uses a configurable same-origin API proxy", () => {
+  const config = source("next.config.ts");
+  assert.match(config, /RETAILOS_API_ORIGIN/);
+  assert.match(config, /source:.*api/);
+});
+
+test("protected API 401s send the user to an expired-session login", () => {
+  const helper = source("lib/api.ts");
+  assert.match(helper, /window.location.assign/);
+  assert.match(helper, /session-expired/);
+  const login = source("app/login/page.tsx");
+  assert.match(login, /Your session expired/);
 });
