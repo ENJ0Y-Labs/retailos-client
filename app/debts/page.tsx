@@ -50,7 +50,7 @@ export default function DebtsPage() {
   }, [storeId]);
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(() => load());
   }, [load]);
 
   return (
