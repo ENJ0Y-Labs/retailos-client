@@ -82,3 +82,7 @@ Examples:
 - `GET /alerts?store_id=...`
 - `POST /alerts/generate-low-stock?store_id=...`
 - `POST /alerts/resolve?store_id=...&id=...`
+
+## Production API and session cookies
+
+In Vercel, set `NEXT_PUBLIC_API_URL=/api`. Next.js rewrites `/api/*` requests to the Flask API while keeping browser requests on the Vercel origin. This lets the browser store the session cookie as a first-party cookie instead of relying on cross-site cookie behavior. Keep the local development value in `.env.local` as `NEXT_PUBLIC_API_URL=http://localhost:5000`; do not commit `.env.local`.
