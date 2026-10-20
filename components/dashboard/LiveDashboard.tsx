@@ -8,12 +8,6 @@ import { api } from "@/lib/api";
 import type { DailyBrief, DashboardStats, SaleSummary } from "@/lib/types";
 import { formatNigeriaDate, formatNigeriaDateTime } from "@/lib/nigeria-time";
 
-type DashboardResponse = {
-  stats: DashboardStats;
-  brief: DailyBrief | null;
-  sales: SaleSummary[];
-};
-
 export default function LiveDashboard() {
   const { user } = useAuth();
   const storeId = user?.store_id ?? null;
@@ -31,14 +25,18 @@ export default function LiveDashboard() {
     async function loadDashboard() {
       try {
         if (!storeId) throw new Error("No store is associated with this account.");
-        const response = await api<DashboardResponse>(
-          "/dashboard?store_id=" + encodeURIComponent(String(storeId)),
-        );
+
+        const query = "?store_id=" + encodeURIComponent(String(storeId));
+        const [dashboard, dailyBrief, recentSales] = await Promise.all([
+          api<DashboardStats>("/dashboard" + query),
+          api<DailyBrief>("/dashboard/daily-brief" + query),
+          api<{ sales: SaleSummary[] }>("/sales" + query),
+        ]);
 
         if (cancelled) return;
-        setStats(response.stats);
-        setBrief(response.brief ?? null);
-        setSales(response.sales ?? []);
+        setStats(dashboard);
+        setBrief(dailyBrief);
+        setSales(recentSales.sales ?? []);
         setError(null);
       } catch (err: unknown) {
         if (cancelled) return;
@@ -49,17 +47,11 @@ export default function LiveDashboard() {
     }
 
     void loadDashboard();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [storeId, retryCount]);
 
   if (loading) {
-    return (
-      <section aria-live="polite" aria-busy="true">
-        <p>Loading dashboard...</p>
-      </section>
-    );
+    return <section aria-live="polite" aria-busy="true"><p>Loading dashboard...</p></section>;
   }
 
   if (error) {
@@ -67,24 +59,16 @@ export default function LiveDashboard() {
       <section role="alert">
         <h2>Dashboard unavailable</h2>
         <p>{error}</p>
-        <button type="button" onClick={() => { setLoading(true); setRetryCount((count) => count + 1); }}>
-          Retry
-        </button>
+        <button type="button" onClick={() => { setLoading(true); setRetryCount((count) => count + 1); }}>Retry</button>
       </section>
     );
   }
 
-  if (!stats) {
-    return <section><p>Dashboard data is unavailable.</p></section>;
-  }
+  if (!stats) return <section><p>Dashboard data is unavailable.</p></section>;
 
   return (
     <DashboardShell title="Dashboard">
-      <header>
-        <h2 className="text-lg font-semibold">
-          Welcome{user?.username ? `, ${user.username}` : ""}.
-        </h2>
-      </header>
+      <header><h2 className="text-lg font-semibold">Welcome{user?.username ? `, ${user.username}` : ""}.</h2></header>
 
       <section aria-labelledby="dashboard-summary" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="dashboard-summary" className="font-semibold">Business summary</h2>
@@ -100,7 +84,36 @@ export default function LiveDashboard() {
 
       <section aria-labelledby="daily-brief" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="daily-brief" className="font-semibold">Daily Business Brief</h2>
-        {brief ? <pre className="mt-3 overflow-x-auto text-sm">{JSON.stringify(brief, null, 2)}</pre> : <p className="mt-3 text-sm text-white/50">Today&apos;s business brief is not available.</p>}
+        {brief ? (
+          <div className="mt-3 space-y-4 text-sm">
+            <div>
+              <h3 className="font-medium">Sales performance</h3>
+              <p>Today: ₦{Number(brief.sales.today_total).toLocaleString("en-NG")}</p>
+              <p>Yesterday: ₦{Number(brief.sales.yesterday_total).toLocaleString("en-NG")}</p>
+              <p>Status: {brief.sales.status}{brief.sales.change_percent != null ? ` (${brief.sales.change_percent}%)` : " (no previous-day comparison available)"}</p>
+            </div>
+            <div>
+              <h3 className="font-medium">Alerts requiring attention</h3>
+              {brief.alerts.length ? <ul className="list-disc pl-5">{brief.alerts.map((alert) => <li key={alert.id}>{alert.message}</li>)}</ul> : <p>No open alerts.</p>}
+            </div>
+            <div>
+              <h3 className="font-medium">Restock recommendations</h3>
+              {brief.insights.restock_recommendations.length ? (
+                <ul className="list-disc pl-5">{brief.insights.restock_recommendations.map((item) => <li key={item.product_id}>{item.product_name}: {item.stock_quantity} in stock (threshold {item.low_stock_threshold ?? "not set"})</li>)}</ul>
+              ) : <p>No products currently require restocking.</p>}
+            </div>
+            <div>
+              <h3 className="font-medium">Top-selling product</h3>
+              {brief.insights.high_performer ? <p>{brief.insights.high_performer.product_name} ({brief.insights.high_performer.units_sold} units sold)</p> : <p>No sales recorded today yet.</p>}
+            </div>
+            {brief.insights.declining_product && (
+              <div>
+                <h3 className="font-medium">Sales to watch</h3>
+                <p>{brief.insights.declining_product.product_name}: {brief.insights.declining_product.yesterday_units_sold} units yesterday and {brief.insights.declining_product.today_units_sold} today.</p>
+              </div>
+            )}
+          </div>
+        ) : <p className="mt-3 text-sm text-white/50">Today&apos;s business brief is not available.</p>}
       </section>
 
       <section aria-labelledby="recent-sales" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
@@ -108,8 +121,8 @@ export default function LiveDashboard() {
         <p className="mt-1 text-xs text-white/45">Timestamps are displayed in Africa/Lagos time (WAT, UTC+01:00).</p>
         {sales.length > 0 ? (
           <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-sm">
-            <thead className="text-xs text-white/40"><tr><th className="px-3 py-2">DATE & TIME (WAT)</th><th className="px-3 py-2">SALE</th><th className="px-3 py-2">TOTAL</th></tr></thead>
-            <tbody>{sales.map((sale) => <tr key={sale.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(sale.created_at)}</td><td className="px-3 py-3">#{sale.id}</td><td className="px-3 py-3">₦{Number(sale.total_amount).toLocaleString("en-NG")}</td></tr>)}</tbody>
+            <thead className="text-xs text-white/40"><tr><th className="px-3 py-2">DATE &amp; TIME (WAT)</th><th className="px-3 py-2">SALE</th><th className="px-3 py-2">TOTAL</th></tr></thead>
+            <tbody>{sales.slice(0, 10).map((sale) => <tr key={sale.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(sale.created_at)}</td><td className="px-3 py-3">#{sale.id}</td><td className="px-3 py-3">₦{Number(sale.total_amount).toLocaleString("en-NG")}</td></tr>)}</tbody>
           </table></div>
         ) : <p className="mt-3 text-sm text-white/50">No sales have been recorded yet.</p>}
       </section>
