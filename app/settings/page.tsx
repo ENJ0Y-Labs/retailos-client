@@ -1,8 +1,43 @@
 "use client";
-import {FormEvent,useEffect,useState} from "react";
-export default function SettingsPage(){
- const [name,setName]=useState("");const [message,setMessage]=useState("");const [saving,setSaving]=useState(false);
- useEffect(()=>{fetch("/api/store").then(r=>r.json()).then(d=>{if(d.name)setName(d.name);else if(d.error)setMessage(d.error)}).catch(()=>setMessage("Could not load store settings."))},[]);
- async function save(e:FormEvent){e.preventDefault();setSaving(true);setMessage("");try{const r=await fetch("/api/store",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to save");setName(d.name);setMessage("Store name updated. Refresh the dashboard to see the new name.")}catch(e){setMessage(e instanceof Error?e.message:"Unable to save")}finally{setSaving(false)}}
- return <main className="min-h-screen bg-[#0b0b0b] p-5 text-white md:p-8"><div className="mx-auto max-w-4xl"><h1 className="text-2xl font-semibold">Settings</h1><div className="mt-6 space-y-5"><form onSubmit={save} className="rounded-2xl border border-white/10 bg-[#151515] p-5"><h2 className="font-semibold">Store profile</h2><label className="mt-4 block text-sm text-white/80" htmlFor="store-name">Store name</label><input id="store-name" className="field mt-2" maxLength={160} required value={name} onChange={e=>setName(e.target.value)} placeholder="Your store name"/><p className="mt-2 text-xs text-white/70">Shown in the RetailOS top bar.</p><button disabled={saving} className="mt-4 rounded-xl bg-orange-500 px-4 py-2 font-semibold text-black disabled:opacity-60">{saving?"Saving...":"Save store name"}</button>{message&&<p role="status" className="mt-3 text-sm text-orange-300">{message}</p>}</form>{[["Account","Profile editing and PIN setup — Coming Soon"],["Notifications","Notification preferences — Coming Soon"],["Devices","Managing logged-in devices — Coming Soon"]].map(([title,text])=><section key={title} className="rounded-2xl border border-white/10 bg-[#151515] p-5"><h2 className="font-semibold">{title}</h2><p className="mt-2 text-sm text-white/70">{text}</p></section>)}</div></div></main>
+
+import { useAuth } from "@/components/auth/AuthProvider";
+import DashboardShell from "@/components/layout/DashboardShell";
+
+export default function SettingsPage() {
+  const { user } = useAuth();
+
+  return (
+    <DashboardShell title="Settings">
+      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <h2 className="font-semibold">Store profile</h2>
+        <p className="mt-2 text-sm text-white/50">Current store information from your authenticated session.</p>
+        <dl className="mt-5 space-y-4">
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-white/40">Store name</dt>
+            <dd className="mt-1">{user?.store_name || "No store name available"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-white/40">Store ID</dt>
+            <dd className="mt-1">{user?.store_id ?? "Not assigned"}</dd>
+          </div>
+        </dl>
+        <p role="status" className="mt-5 rounded-lg bg-white/5 p-3 text-sm text-white/60">
+          Store editing is unavailable because the current Flask API does not expose a store settings endpoint. Editing has been disabled rather than sending unsupported requests.
+        </p>
+      </section>
+
+      <div className="mt-5 space-y-4">
+        {[
+          ["Account", "Profile editing and PIN setup are not available in the current API."],
+          ["Notifications", "Notification preferences are not available in the current API."],
+          ["Devices", "Managing logged-in devices is not available in the current API."],
+        ].map(([title, description]) => (
+          <section key={title} className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+            <h2 className="font-semibold">{title}</h2>
+            <p className="mt-2 text-sm text-white/60">{description}</p>
+          </section>
+        ))}
+      </div>
+    </DashboardShell>
+  );
 }

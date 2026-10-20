@@ -71,10 +71,16 @@ export type Receipt = {
   sale_id: number;
   customer_id: number | null;
   total_amount: string;
+  amount_paid: string;
+  balance: string;
   created_at: string;
   items: Array<{
     product_id: number;
     quantity: number;
+    unit_name?: string | null;
+    unit_base_quantity?: number;
+    base_quantity_deducted?: number;
+    base_unit?: string;
     price_at_sale?: string;
     total: string;
   }>;
