@@ -62,6 +62,7 @@ export default function DebtsPage() {
   const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Transfer" | "POS">("Cash");
   const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory | null>(null);
+  const [historyError, setHistoryError] = useState("");
   const [updatedReceipt, setUpdatedReceipt] = useState<Receipt | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -120,6 +121,7 @@ export default function DebtsPage() {
     setPaymentMethod("Cash");
     setPendingPayment(null);
     setPaymentHistory(null);
+    setHistoryError("");
     setUpdatedReceipt(null);
     setError("");
     setMessage("");
@@ -130,8 +132,11 @@ export default function DebtsPage() {
       const params = new URLSearchParams({ store_id: String(storeId), sale_id: String(sale.id) });
       const data = await api<PaymentHistory>(`/sales/payments?${params.toString()}`);
       setPaymentHistory(data);
+      setHistoryError("");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load payment history.");
+      const reason = cause instanceof Error ? cause.message : "Unable to load payment history.";
+      setHistoryError(reason);
+      setError(reason);
     } finally {
       setHistoryLoading(false);
     }
@@ -182,30 +187,45 @@ export default function DebtsPage() {
         },
       });
 
+      // The server accepted this transaction ID. Never leave it in retry state
+      // merely because a follow-up history or receipt request fails.
+      setPendingPayment(null);
+      setPaymentAmount("");
+      setMessage(`Payment of ${money(request.amount)} was accepted for sale #${selectedSale.id}. Refreshing the balance and receipt…`);
+
       const params = new URLSearchParams({ store_id: String(storeId), sale_id: String(selectedSale.id) });
-      const [historyData, receiptData] = await Promise.all([
-        api<PaymentHistory>(`/sales/payments?${params.toString()}`),
-        api<{ receipt: Receipt }>("/sales/receipt", {
+      let historyData: PaymentHistory | null = null;
+      try {
+        historyData = await api<PaymentHistory>(`/sales/payments?${params.toString()}`);
+        setPaymentHistory(historyData);
+        setHistoryError("");
+        setSelectedSale((current) => current ? { ...current, total_amount: historyData!.total_amount, amount_paid: historyData!.amount_paid, balance: historyData!.balance } : current);
+        setSales((current) => Number(historyData!.balance) > 0
+          ? current.map((sale) => sale.id === selectedSale.id ? { ...sale, total_amount: historyData!.total_amount, amount_paid: historyData!.amount_paid, balance: historyData!.balance } : sale)
+          : current.filter((sale) => sale.id !== selectedSale.id));
+        setCustomers((current) => current.map((customer) => customer.id === selectedSale.customer_id
+          ? { ...customer, outstanding_balance: Math.max(0, Number(customer.outstanding_balance) - Number(request.amount)).toFixed(2) }
+          : customer));
+        setTotalOutstanding((current) => Math.max(0, Number(current) - Number(request.amount)).toFixed(2));
+        setMessage(`Payment of ${money(request.amount)} recorded against sale #${selectedSale.id}. Remaining balance: ${money(historyData!.balance)}.`);
+      } catch (cause) {
+        const reason = cause instanceof Error ? cause.message : "Payment was accepted, but the updated payment history could not be loaded.";
+        setHistoryError(reason);
+        setError(`Payment was accepted by the server, but payment history refresh failed: ${reason}. Do not submit another payment. Refresh this sale to verify the balance.`);
+      }
+
+      try {
+        const receiptData = await api<{ receipt: Receipt }>("/sales/receipt", {
           method: "POST",
           json: { store_id: storeId, id: selectedSale.id },
-        }),
-      ]);
-
-      setPaymentHistory(historyData);
-      setUpdatedReceipt(receiptData.receipt);
-      setSelectedSale((current) => current ? { ...current, total_amount: historyData.total_amount, amount_paid: historyData.amount_paid, balance: historyData.balance } : current);
-      setSales((current) => Number(historyData.balance) > 0
-        ? current.map((sale) => sale.id === selectedSale.id ? { ...sale, total_amount: historyData.total_amount, amount_paid: historyData.amount_paid, balance: historyData.balance } : sale)
-        : current.filter((sale) => sale.id !== selectedSale.id));
-      setCustomers((current) => current.map((customer) => customer.id === selectedSale.customer_id
-        ? { ...customer, outstanding_balance: Math.max(0, Number(customer.outstanding_balance) - Number(request.amount)).toFixed(2) }
-        : customer));
-      setTotalOutstanding((current) => Math.max(0, Number(current) - Number(request.amount)).toFixed(2));
-      setPaymentAmount("");
-      setPendingPayment(null);
-      setMessage(`Payment of ${money(request.amount)} recorded against sale #${selectedSale.id}. Remaining balance: ${money(historyData.balance)}.`);
+        });
+        setUpdatedReceipt(receiptData.receipt);
+      } catch (cause) {
+        const reason = cause instanceof Error ? cause.message : "Receipt refresh failed.";
+        setError((current) => current ? `${current} Receipt refresh also failed: ${reason}.` : `Payment was recorded, but the receipt could not be refreshed: ${reason}.`);
+      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to record payment. Retry the same amount and method to avoid recording it twice.");
+      setError(cause instanceof Error ? cause.message : "Payment outcome is uncertain. Retry only with the same transaction ID and exact amount/method.");
     } finally {
       paymentLock.current = false;
       setSavingPayment(false);
@@ -338,6 +358,8 @@ export default function DebtsPage() {
             <h3 className="font-semibold">Payment history</h3>
             {historyLoading ? (
               <p role="status" className="mt-2 text-sm text-white/40">Loading payment history…</p>
+            ) : historyError ? (
+              <p role="alert" className="mt-2 text-sm text-red-300">Payment history could not be verified: {historyError}. Do not start another payment attempt.</p>
             ) : paymentHistory && paymentHistory.payments.length > 0 ? (
               <div className="mt-2 overflow-x-auto">
                 <table className="w-full text-left text-sm">
