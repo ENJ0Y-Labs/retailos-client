@@ -67,7 +67,7 @@ export default function CustomersPage() {
   }
 
   function normalizePhone(value: string) {
-    const digits = value.replace(/\\D/g, "");
+    const digits = value.replace(/\D/g, "");
     if (digits.length === 13 && digits.startsWith("234")) return `0${digits.slice(3)}`;
     return digits;
   }
