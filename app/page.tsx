@@ -51,7 +51,7 @@ export default function Home() {
               Get started <span aria-hidden="true" className="ml-2">→</span>
             </Link>
             <Link href="/demo" className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5">
-              Sign in to RetailOS
+              Try the demo
             </Link>
           </div>
           <p className="mt-4 text-xs leading-5 text-white/45">
