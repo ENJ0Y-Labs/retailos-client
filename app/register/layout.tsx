@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Create a TX RetailOS account to organize your shop's products, stock, and sales.",
   robots: "noindex, nofollow",
   index: false,
-};
+} as Metadata;
 
 export default function RegisterLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;

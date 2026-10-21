@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Record and review sales transactions in TX RetailOS.",
   robots: "noindex, nofollow",
   index: false,
-};
+} as Metadata;
 
 export default function RouteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;

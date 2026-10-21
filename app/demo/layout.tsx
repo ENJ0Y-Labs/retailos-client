@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Explore a sample provision-store catalogue and complete a simulated sale in TX RetailOS.",
   robots: "noindex, nofollow",
   index: false,
-};
+} as Metadata;
 
 export default function DemoLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;

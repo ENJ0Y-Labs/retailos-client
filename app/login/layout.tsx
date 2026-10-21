@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Sign in to TX RetailOS to manage your store's products, stock, and sales.",
   robots: "noindex, nofollow",
   index: false,
-};
+} as Metadata;
 
 export default function LoginLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return children;
