@@ -10,8 +10,8 @@ test("root metadata describes RetailOS and configures Open Graph and Twitter car
   assert.match(source, /openGraph:/);
   assert.match(source, /siteName/);
   assert.match(source, /twitter:/);
-  assert.match(source, /card:\s*"summary"/);
-  assert.match(source, /template:\s*"%s \| TX RetailOS"/);
+  assert.match(source, /card:\s*"summary_large_image"/);
+  assert.match(source, /title: "TX RetailOS \| Retail and Stock Management"/);
 });
 
 test("public auth routes have distinct titles and are excluded from indexing", async () => {
