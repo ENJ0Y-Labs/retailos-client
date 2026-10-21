@@ -191,25 +191,25 @@ export default function InventoryPage() {
 
   return (
     <DashboardShell title="Inventory">
-      {message && <p className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
-      {error && <p className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      <form onSubmit={save} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-4">
-        <input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field" placeholder="Product name" />
-        <input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field" placeholder="Price" />
-        <input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field" placeholder={editing ? "Stock quantity" : "Opening stock"} />
-        <select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value as ProductType })} className="field" aria-label="Product type" disabled={Boolean(editing)}>
+      {message && <p role="status" className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
+      {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+      <form onSubmit={save} data-tour="inventory-form" aria-label={editing ? "Edit product" : "Add a product"} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-4">
+        <label className="block text-xs text-white/75">Product name<input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. Rice 50kg" /></label>
+        <label className="block text-xs text-white/75">Price (₦)<input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field mt-1 text-sm" placeholder="0.00" /></label>
+        <label className="block text-xs text-white/75">{editing ? "Stock quantity" : "Opening stock"}<input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field mt-1 text-sm" placeholder="0" /></label>
+        <label className="block text-xs text-white/75">Product type<select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value as ProductType })} className="field mt-1 text-sm" disabled={Boolean(editing)}>
           <option value="Physical">Physical product</option>
           <option value="Service">Service</option>
-        </select>
-        <input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field" placeholder="Base unit (e.g. piece)" disabled={form.productType === "Service"} />
-        <input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field" placeholder="Low-stock threshold" />
+        </select></label>
+        <label className="block text-xs text-white/75">Base unit<input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. piece" disabled={form.productType === "Service"} /></label>
+        <label className="block text-xs text-white/75">Low-stock threshold (optional)<input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field mt-1 text-sm" placeholder="Alert me at or below…" /></label>
         <div className="flex gap-2 md:col-span-4">
           <button disabled={pendingAction !== null} className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50">{pendingAction === "save" ? "Saving..." : editing ? "Save changes" : "Add product"}</button>
           {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
-      <CsvImport storeId={storeId} onImported={loadProducts} />
-      <section className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <div data-tour="inventory-import"><CsvImport storeId={storeId} onImported={loadProducts} /></div>
+      <section data-tour="inventory-table" className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
         <table className="w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">TYPE</th><th className="px-3 py-3">BASE UNIT</th><th className="px-3 py-3">SELLING UNITS</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>
           <tbody>
@@ -240,11 +240,11 @@ export default function InventoryPage() {
                 </div></td>
               </tr>
             ))}
-            {!products.length && <tr><td colSpan={8} className="px-3 py-10 text-center text-white/30">No products yet.</td></tr>}
+            {!products.length && <tr><td colSpan={8} className="px-3 py-10 text-center text-white/70">No products yet. Fill in the form above and press “Add product”, or import a CSV file.</td></tr>}
           </tbody>
         </table>
       </section>
-      <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="inventory-movements" className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="flex items-center justify-between gap-3">
           <div><h2 className="font-semibold">Inventory movements</h2><p className="mt-1 text-xs text-white/35">{movementProduct ? "Product #" + movementProduct : "All store movements"}</p></div>
           <button onClick={() => loadMovements()} className="rounded-lg bg-white/10 px-3 py-2 text-sm">Refresh all</button>

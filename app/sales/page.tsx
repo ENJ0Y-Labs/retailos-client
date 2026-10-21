@@ -1,6 +1,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -338,19 +339,27 @@ export default function SalesPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="field max-w-sm"
+              aria-label="Search products or services"
+              data-tour="sales-search"
               placeholder="Search products or services..."
             />
           </div>
 
           {loading ? (
-            <p className="py-12 text-center text-white/30">Loading...</p>
+            <p role="status" className="py-12 text-center text-white/70">Loading products…</p>
           ) : filteredProducts.length === 0 ? (
-            <p className="py-12 text-center text-white/30">
-              No matching products or services.
+            <p className="py-12 text-center text-white/70">
+              {query ? (
+                "No matching products or services."
+              ) : (
+                <>
+                  Nothing to sell yet. <Link href="/inventory" className="text-orange-300 underline underline-offset-4">Add a product or service</Link> first.
+                </>
+              )}
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => {
+              {filteredProducts.map((product, productIndex) => {
                 const isService = isServiceProduct(product);
                 const stock = stockFor(product);
                 const firstUnit = unitsFor(product)[0];
@@ -373,6 +382,7 @@ export default function SalesPage() {
 
                     <button
                       disabled={!isService && stock <= 0}
+                      data-tour={productIndex === 0 ? "sales-add" : undefined}
                       onClick={() => addProduct(product)}
                       className="mt-4 w-full rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:bg-white/10 disabled:text-white/30"
                     >
@@ -389,7 +399,7 @@ export default function SalesPage() {
           )}
         </section>
 
-        <aside className="h-fit rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <aside data-tour="sales-cart" className="h-fit rounded-2xl border border-white/10 bg-[#151515] p-5 lg:sticky lg:top-20">
           <h2 className="text-lg font-semibold">Checkout</h2>
 
           <div className="mt-5 space-y-3">
@@ -512,8 +522,8 @@ export default function SalesPage() {
             })}
 
             {cart.length === 0 && (
-              <p className="py-8 text-center text-sm text-white/30">
-                Cart is empty.
+              <p className="py-8 text-center text-sm text-white/70">
+                Cart is empty. Press “Add to cart” on a product to start a sale.
               </p>
             )}
           </div>
@@ -523,6 +533,7 @@ export default function SalesPage() {
             <strong>{money(total)}</strong>
           </div>
 
+          <div data-tour="sales-payment">
           <label className="block text-sm">
             Amount paid
             <input
@@ -566,6 +577,8 @@ export default function SalesPage() {
                 </button>
               ))}
             </div>
+          </div>
+
           </div>
 
           <label className="block text-sm">
@@ -616,6 +629,7 @@ export default function SalesPage() {
               (balance > 0 && !customerId)
             }
             onClick={createSale}
+            data-tour="sales-complete"
             className="mt-4 w-full rounded-xl bg-orange-500 py-3 font-semibold text-black disabled:bg-white/10 disabled:text-white/30"
           >
             {submitting ? "Processing..." : "Complete sale"}

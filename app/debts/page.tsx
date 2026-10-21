@@ -56,7 +56,7 @@ export default function DebtsPage() {
   return (
     <DashboardShell title="Who Owes Me">
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      <section className="mb-5 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
+      <section data-tour="debts-total" aria-label="Total outstanding" className="mb-5 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
         <p className="text-sm text-white/50">Total outstanding</p>
         <p className="mt-2 text-2xl font-semibold text-orange-400">{money(totalOutstanding)}</p>
       </section>
