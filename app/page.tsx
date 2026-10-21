@@ -51,7 +51,7 @@ export default function Home() {
               Get started <span aria-hidden="true" className="ml-2">→</span>
             </Link>
             <Link href="/demo" className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/5">
-              Sign in to RetailOS
+              Try the demo
             </Link>
           </div>
           <p className="mt-4 text-xs leading-5 text-white/45">
@@ -130,6 +130,7 @@ export default function Home() {
         <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
           <Link href="/register" className="inline-flex justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400">Create your account</Link>
           <Link href="/login" className="inline-flex justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">I already have an account</Link>
+          <Link href="mailto:support.trexave@gmail.com?subject=TX%20RetailOS%20Pricing%20Enquiry" className="inline-flex justify-center rounded-xl border border-orange-500/40 px-5 py-3 text-sm font-semibold text-orange-300 transition hover:border-orange-400 hover:bg-orange-500/10">Contact sales</Link>
         </div>
       </section>
 
