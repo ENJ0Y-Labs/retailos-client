@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { TourProvider } from "@/components/tour/TourProvider";
 import "./globals.css";
 
 const siteName = "TX RetailOS";
@@ -34,7 +35,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body><AuthProvider>{children}</AuthProvider></body>
+      <body>
+        <AuthProvider>
+          <TourProvider>{children}</TourProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

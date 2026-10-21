@@ -72,11 +72,11 @@ export default function AlertsPage() {
     <DashboardShell role={role} user={currentUser!} title="Alerts">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <p className="text-sm text-white/40">Open alerts from the server.</p>
-        <button onClick={generate} className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Generate low-stock alerts</button>
+        <button onClick={generate} data-tour="alerts-generate" className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Generate low-stock alerts</button>
       </div>
-      {message && <p className="mt-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
-      {error && <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      <div className="mt-6 space-y-3">
+      {message && <p role="status" className="mt-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
+      {error && <p role="alert" className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+      <div data-tour="alerts-list" className="mt-6 space-y-3">
         {alerts.map((alert) => (
           <article key={alert.id} className="rounded-2xl border border-white/10 bg-[#151515] p-5">
             <div className="flex flex-col justify-between gap-4 sm:flex-row">
@@ -89,7 +89,7 @@ export default function AlertsPage() {
             </div>
           </article>
         ))}
-        {!alerts.length && <div className="rounded-2xl border border-white/10 bg-[#151515] p-10 text-center text-white/30">No open alerts.</div>}
+        {!alerts.length && <div className="rounded-2xl border border-white/10 bg-[#151515] p-10 text-center text-white/70">No open alerts. Set a low-stock threshold on your products, then press “Generate low-stock alerts”.</div>}
       </div>
     </DashboardShell>
   );

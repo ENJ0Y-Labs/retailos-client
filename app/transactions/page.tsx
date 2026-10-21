@@ -94,7 +94,7 @@ export default function TransactionsPage() {
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
       <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-        <div className="mb-5 grid gap-3 md:grid-cols-2">
+        <div data-tour="transactions-filters" className="mb-5 grid gap-3 md:grid-cols-2">
           <input
             aria-label="Search transactions"
             value={query}
@@ -115,7 +115,7 @@ export default function TransactionsPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div data-tour="transactions-table" className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-white/40">
               <tr>

@@ -67,14 +67,14 @@ export default function CustomersPage() {
 
   return (
     <DashboardShell title="Customers">
-      {message && <p className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
-      {error && <p className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      <form onSubmit={create} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-[1fr_1fr_auto]">
-        <input required minLength={2} value={name} onChange={(e) => setName(e.target.value)} className="field" placeholder="Customer name" />
-        <input value={contact} onChange={(e) => setContact(e.target.value)} className="field" placeholder="Phone / contact" />
-        <button className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">Add customer</button>
+      {message && <p role="status" className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
+      {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+      <form onSubmit={create} data-tour="customers-form" aria-label="Add a customer" className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-[1fr_1fr_auto]">
+        <label className="block text-xs text-white/75">Customer name<input required minLength={2} value={name} onChange={(e) => setName(e.target.value)} className="field mt-1 text-sm" placeholder="e.g. Mrs Adeyemi" /></label>
+        <label className="block text-xs text-white/75">Phone / contact (optional)<input value={contact} onChange={(e) => setContact(e.target.value)} className="field mt-1 text-sm" placeholder="e.g. 0803 000 0000" /></label>
+        <button className="self-end rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black">Add customer</button>
       </form>
-      <section className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="customers-table" className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
         <table className="w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">CONTACT</th><th className="px-3 py-3">ID</th><th className="px-3 py-3">ACTION</th></tr></thead>
           <tbody>
@@ -84,7 +84,7 @@ export default function CustomersPage() {
                 <td className="px-3 py-4"><button onClick={() => history(customer.id)} className="rounded bg-white/10 px-2 py-1 text-xs">Purchase history</button></td>
               </tr>
             ))}
-            {!customers.length && <tr><td colSpan={4} className="px-3 py-10 text-center text-white/30">No customers yet.</td></tr>}
+            {!customers.length && <tr><td colSpan={4} className="px-3 py-10 text-center text-white/70">No customers yet. Add your first customer with the form above.</td></tr>}
           </tbody>
         </table>
       </section>
