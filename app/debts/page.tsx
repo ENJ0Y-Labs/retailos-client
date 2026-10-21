@@ -102,7 +102,7 @@ export default function DebtsPage() {
       setCustomers(owingCustomers);
       setSales(outstandingSales);
       setTotalOutstanding(owingData.total_outstanding ?? "0.00");
-      setSelectedSale((current) => current ? outstandingSales.find((sale) => sale.id === current.id) ?? null : null);
+      setSelectedSale((current) => current ? outstandingSales.find((sale) => sale.id === current.id) ?? current : null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to load outstanding balances.");
     } finally {
@@ -193,10 +193,17 @@ export default function DebtsPage() {
 
       setPaymentHistory(historyData);
       setUpdatedReceipt(receiptData.receipt);
+      setSelectedSale((current) => current ? { ...current, total_amount: historyData.total_amount, amount_paid: historyData.amount_paid, balance: historyData.balance } : current);
+      setSales((current) => Number(historyData.balance) > 0
+        ? current.map((sale) => sale.id === selectedSale.id ? { ...sale, total_amount: historyData.total_amount, amount_paid: historyData.amount_paid, balance: historyData.balance } : sale)
+        : current.filter((sale) => sale.id !== selectedSale.id));
+      setCustomers((current) => current.map((customer) => customer.id === selectedSale.customer_id
+        ? { ...customer, outstanding_balance: Math.max(0, Number(customer.outstanding_balance) - Number(request.amount)).toFixed(2) }
+        : customer));
+      setTotalOutstanding((current) => Math.max(0, Number(current) - Number(request.amount)).toFixed(2));
       setPaymentAmount("");
       setPendingPayment(null);
       setMessage(`Payment of ${money(request.amount)} recorded against sale #${selectedSale.id}. Remaining balance: ${money(historyData.balance)}.`);
-      await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to record payment. Retry the same amount and method to avoid recording it twice.");
     } finally {
