@@ -69,7 +69,7 @@ export default function SettingsPage() {
 
       <div className="mt-5 space-y-4">
         {[
-          ["Account options", "Profile editing and PIN setup are not available in the current API."],
+          ["Profile", "Profile editing and PIN setup are not available in the current API."],
           ["Notifications", "Notification preferences are not available in the current API."],
           ["Devices", "Managing logged-in devices is not available in the current API."],
         ].map(([title, description]) => (
