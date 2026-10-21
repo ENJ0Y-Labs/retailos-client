@@ -10,7 +10,19 @@ const description =
 export const metadata: Metadata = {
   title: "TX RetailOS | Retail and Stock Management",
   description,
+  openGraph: {
+    title: "TX RetailOS | Retail and Stock Management",
+    description,
+    siteName,
+    template: "%s | TX RetailOS",
+  },
+  twitter: {
+    card: "summary",
+    title: "TX RetailOS | Retail and Stock Management",
+    description,
+  },
   robots: "index, follow",
+  index: true,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
