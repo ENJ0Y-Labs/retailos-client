@@ -14,17 +14,30 @@ export const metadata: Metadata = {
   },
   description,
   applicationName: siteName,
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     siteName,
     title: "TX RetailOS | Retail and Stock Management",
     description,
     locale: "en_NG",
+    url: "https://retailos-client-sigma.vercel.app/",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "TX RetailOS retail management platform",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "TX RetailOS | Retail and Stock Management",
     description,
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,

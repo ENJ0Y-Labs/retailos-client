@@ -139,6 +139,7 @@ export default function Home() {
           <div className="flex gap-5">
             <Link href="/login" className="hover:text-white/70">Sign in</Link>
             <Link href="/register" className="hover:text-white/70">Create account</Link>
+            <Link href="/privacy" className="hover:text-white/70">Privacy policy</Link>
           </div>
         </div>
       </footer>
