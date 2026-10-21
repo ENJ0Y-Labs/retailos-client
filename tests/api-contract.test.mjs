@@ -74,6 +74,15 @@ test("debts page records payments through the supported store-scoped payment con
   assert.doesNotMatch(page, /\/api\/debts/);
 });
 
+test("payment refresh failures do not leave an accepted payment retryable or masquerade as empty history", () => {
+  const page = source("app/debts/page.tsx");
+  assert.match(page, /setPendingPayment\(null\);[\s\S]*?Refreshing the balance and receipt/);
+  assert.match(page, /Payment was accepted by the server, but payment history refresh failed/);
+  assert.match(page, /Payment history could not be verified:/);
+  assert.match(page, /historyError \? \(/);
+  assert.match(page, /Retry only with the same transaction ID/);
+});
+
 test("settings page does not call unsupported store mutation routes", () => {
   const page = source("app/settings/page.tsx");
   assert.match(page, /user\?\.store_name/);
