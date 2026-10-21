@@ -21,7 +21,10 @@ import {
   withWelcome,
 } from "../lib/tour-core.mjs";
 
-const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+// Sources are checked out with the platform's line endings (CRLF on Windows),
+// so normalize to LF before matching multi-line snippets.
+const read = async (path) =>
+  (await readFile(new URL(`../${path}`, import.meta.url), "utf8")).replace(/\r\n/g, "\n");
 
 function run(actions, initial = IDLE) {
   let state = initial;
