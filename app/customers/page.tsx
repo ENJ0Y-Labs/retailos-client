@@ -93,7 +93,7 @@ export default function CustomersPage() {
     }
 
     const digits = normalizePhone(trimmedContact);
-    if (trimmedContact && (digits.length < 7 || digits.length > 15)) {
+    if (trimmedContact && (!/^[+()\\d\\s.-]+$/.test(trimmedContact) || digits.length < 7 || digits.length > 15)) {
       setError("Enter a valid phone number with 7 to 15 digits, or leave it blank.");
       return;
     }
