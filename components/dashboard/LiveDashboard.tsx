@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardShell from "@/components/layout/DashboardShell";
@@ -51,38 +52,67 @@ export default function LiveDashboard() {
   }, [storeId, retryCount]);
 
   if (loading) {
-    return <section aria-live="polite" aria-busy="true"><p>Loading dashboard...</p></section>;
+    return (
+      <DashboardShell title="Dashboard">
+        <section aria-live="polite" aria-busy="true" className="space-y-5">
+          <p className="text-sm text-white/70">Loading your dashboard…</p>
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-[#151515] motion-reduce:animate-none" />
+          ))}
+        </section>
+      </DashboardShell>
+    );
   }
 
   if (error) {
     return (
-      <section role="alert">
-        <h2>Dashboard unavailable</h2>
-        <p>{error}</p>
-        <button type="button" onClick={() => { setLoading(true); setRetryCount((count) => count + 1); }}>Retry</button>
-      </section>
+      <DashboardShell title="Dashboard">
+        <section role="alert" className="max-w-xl rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+          <h2 className="font-semibold">Dashboard unavailable</h2>
+          <p className="mt-2 text-sm text-white/80">{error}</p>
+          <button
+            type="button"
+            onClick={() => { setLoading(true); setRetryCount((count) => count + 1); }}
+            className="mt-4 rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black"
+          >
+            Try again
+          </button>
+        </section>
+      </DashboardShell>
     );
   }
 
-  if (!stats) return <section><p>Dashboard data is unavailable.</p></section>;
+  if (!stats) {
+    return (
+      <DashboardShell title="Dashboard">
+        <p className="text-sm text-white/70">Dashboard data is unavailable.</p>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell title="Dashboard">
-      <header><h2 className="text-lg font-semibold">Welcome{user?.username ? `, ${user.username}` : ""}.</h2></header>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Welcome{user?.username ? `, ${user.username}` : ""}.</h2>
+        <div className="flex flex-wrap gap-2" aria-label="Quick actions" role="group">
+          <Link href="/sales" className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Record a sale</Link>
+          <Link href="/inventory" className="rounded-xl bg-white/10 px-4 py-2 text-sm">Add a product</Link>
+        </div>
+      </header>
 
-      <section aria-labelledby="dashboard-summary" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section aria-labelledby="dashboard-summary" data-tour="dashboard-summary" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="dashboard-summary" className="font-semibold">Business summary</h2>
         <p className="mt-1 text-xs text-white/45">Daily sales reporting date (Africa/Lagos): {brief?.date ? formatNigeriaDate(brief.date + "T12:00:00+01:00") : "Date not provided by the server"}</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <DashboardMetric label="Products" value={stats.products_count} />
-          <DashboardMetric label="Low-stock products" value={stats.low_stock_count} />
-          <DashboardMetric label="Open alerts" value={stats.open_alerts_count} />
+          <DashboardMetric label="Products" value={stats.products_count} href="/inventory" />
+          <DashboardMetric label="Low-stock products" value={stats.low_stock_count} href="/inventory" />
+          <DashboardMetric label="Open alerts" value={stats.open_alerts_count} href="/alerts" />
           <DashboardMetric label="Sales in reporting period" value={stats.today_sales_count} />
           <DashboardMetric label="Sales total in reporting period" value={"₦" + Number(stats.today_sales_total).toLocaleString("en-NG")} />
         </div>
       </section>
 
-      <section aria-labelledby="daily-brief" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section aria-labelledby="daily-brief" data-tour="dashboard-brief" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="daily-brief" className="font-semibold">Daily Business Brief</h2>
         {brief ? (
           <div className="mt-3 space-y-4 text-sm">
@@ -124,12 +154,27 @@ export default function LiveDashboard() {
             <thead className="text-xs text-white/40"><tr><th className="px-3 py-2">DATE &amp; TIME (WAT)</th><th className="px-3 py-2">SALE</th><th className="px-3 py-2">TOTAL</th></tr></thead>
             <tbody>{sales.slice(0, 10).map((sale) => <tr key={sale.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(sale.created_at)}</td><td className="px-3 py-3">#{sale.id}</td><td className="px-3 py-3">₦{Number(sale.total_amount).toLocaleString("en-NG")}</td></tr>)}</tbody>
           </table></div>
-        ) : <p className="mt-3 text-sm text-white/50">No sales have been recorded yet.</p>}
+        ) : (
+          <p className="mt-3 text-sm text-white/70">
+            No sales have been recorded yet. <Link href="/sales" className="text-orange-300 underline underline-offset-4">Record your first sale</Link>.
+          </p>
+        )}
       </section>
     </DashboardShell>
   );
 }
 
-function DashboardMetric({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded-xl bg-white/5 p-4"><p className="text-xs text-white/45">{label}</p><p className="mt-2 text-lg font-semibold">{value}</p></div>;
+function DashboardMetric({ label, value, href }: { label: string; value: string | number; href?: string }) {
+  const content = (
+    <>
+      <p className="text-xs text-white/65">{label}</p>
+      <p className="mt-2 text-lg font-semibold">{value}</p>
+    </>
+  );
+  if (!href) return <div className="rounded-xl bg-white/5 p-4">{content}</div>;
+  return (
+    <Link href={href} className="block rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10">
+      {content}
+    </Link>
+  );
 }
