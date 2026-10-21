@@ -26,6 +26,23 @@ test("transaction details use the supported sale lookup route and store ID", () 
   assert.match(page, /api<\{ receipt: Receipt \}>/);
 });
 
+test("checkout connects customer creation, sale balances, and updated receipt display", () => {
+  const page = source("app/sales/page.tsx");
+  const types = source("lib/types.ts");
+  assert.match(page, /setCustomerId\(String\(data\.customer\.id\)\)/);
+  assert.match(page, /customer_id: customerId \? Number\(customerId\) : null/);
+  assert.match(page, /client_transaction_id: saleTransactionId/);
+  assert.match(page, /payment_method: paymentMethod === "CASH"/);
+  assert.match(page, /amount_paid: amountPaid/);
+  assert.match(page, /setReceipt\(data\.receipt\)/);
+  assert.match(page, /label="Amount paid" value=\{money\(Number\(receipt\.amount_paid\)\)\}/);
+  assert.match(page, /label="Outstanding balance" value=\{money\(Number\(receipt\.balance\)\)\}/);
+  assert.match(page, /sale\.amount_paid/);
+  assert.match(page, /sale\.balance/);
+  assert.match(page, /window\.print\(\)/);
+  assert.match(types, /export type SaleSummary = \{[\s\S]*?amount_paid: string;[\s\S]*?balance: string;/);
+});
+
 test("debts page records payments through the supported store-scoped payment contract", () => {
   const page = source("app/debts/page.tsx");
   assert.match(page, /\/customers\/owes\?store_id=/);

@@ -64,6 +64,9 @@ export type SaleSummary = {
   id: number;
   customer_id: number | null;
   total_amount: string;
+  amount_paid: string;
+  balance: string;
+  payment_method: "Cash" | "Transfer" | "POS";
   created_at: string;
 };
 
