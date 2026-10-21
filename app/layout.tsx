@@ -10,16 +10,29 @@ const description =
 export const metadata: Metadata = {
   title: "TX RetailOS | Retail and Stock Management",
   description,
+  applicationName: siteName,
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "TX RetailOS | Retail and Stock Management",
     description,
-    siteName,
-    template: "%s | TX RetailOS",
+    locale: "en_NG",
+    url: "https://retailos-client-sigma.vercel.app/",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "TX RetailOS retail management platform",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "TX RetailOS | Retail and Stock Management",
     description,
+    images: ["/og-image.png"],
   },
   robots: "index, follow",
   index: true,
