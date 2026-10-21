@@ -8,28 +8,9 @@ const description =
   "Manage products, track stock, record sales, and keep daily shop operations organized with TX RetailOS, built for provision shops and growing retailers.";
 
 export const metadata: Metadata = {
-  title: {
-    default: "TX RetailOS | Retail and Stock Management",
-    template: "%s | TX RetailOS",
-  },
+  title: "TX RetailOS | Retail and Stock Management",
   description,
-  applicationName: siteName,
-  openGraph: {
-    type: "website",
-    siteName,
-    title: "TX RetailOS | Retail and Stock Management",
-    description,
-    locale: "en_NG",
-  },
-  twitter: {
-    card: "summary",
-    title: "TX RetailOS | Retail and Stock Management",
-    description,
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: "index, follow",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
