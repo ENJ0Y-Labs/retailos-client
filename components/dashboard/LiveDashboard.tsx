@@ -51,25 +51,16 @@ export default function LiveDashboard() {
     return () => { cancelled = true; };
   }, [storeId, retryCount]);
 
-  if (loading) {
-    return (
-      <DashboardShell title="Dashboard">
-        <section aria-live="polite" aria-busy="true" className="space-y-5">
-          <p className="text-sm text-white/70">Loading your dashboard…</p>
-          {[0, 1, 2].map((item) => (
-            <div key={item} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-[#151515] motion-reduce:animate-none" />
-          ))}
-        </section>
-      </DashboardShell>
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardShell title="Dashboard">
-        <section role="alert" className="max-w-xl rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+  // The shell (sidebar, title, sign out) is always rendered so the layout never
+  // jumps. Only the content area changes between loading, error, and loaded.
+  return (
+    <DashboardShell title="Dashboard">
+      {loading ? (
+        <DashboardSkeleton />
+      ) : error ? (
+        <section role="alert" className="rounded-2xl border border-red-500/20 bg-[#151515] p-6">
           <h2 className="font-semibold">Dashboard unavailable</h2>
-          <p className="mt-2 text-sm text-white/80">{error}</p>
+          <p className="mt-2 text-sm text-red-300">{error}</p>
           <button
             type="button"
             onClick={() => { setLoading(true); setRetryCount((count) => count + 1); }}
@@ -78,27 +69,29 @@ export default function LiveDashboard() {
             Try again
           </button>
         </section>
-      </DashboardShell>
-    );
-  }
+      ) : !stats ? (
+        <p className="text-sm text-white/60">Dashboard data is unavailable.</p>
+      ) : (
+        <DashboardContent user={user?.username} stats={stats} brief={brief} sales={sales} />
+      )}
+    </DashboardShell>
+  );
+}
 
-  if (!stats) {
-    return (
-      <DashboardShell title="Dashboard">
-        <p className="text-sm text-white/70">Dashboard data is unavailable.</p>
-      </DashboardShell>
-    );
-  }
-
+function DashboardContent({
+  user,
+  stats,
+  brief,
+  sales,
+}: {
+  user?: string;
+  stats: DashboardStats;
+  brief: DailyBrief | null;
+  sales: SaleSummary[];
+}) {
   return (
-    <DashboardShell title="Dashboard">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Welcome{user?.username ? `, ${user.username}` : ""}.</h2>
-        <div className="flex flex-wrap gap-2" aria-label="Quick actions" role="group">
-          <Link href="/sales" className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-black">Record a sale</Link>
-          <Link href="/inventory" className="rounded-xl bg-white/10 px-4 py-2 text-sm">Add a product</Link>
-        </div>
-      </header>
+    <>
+      <header><h2 className="text-lg font-semibold">Welcome{user ? `, ${user}` : ""}.</h2></header>
 
       <section aria-labelledby="dashboard-summary" data-tour="dashboard-summary" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="dashboard-summary" className="font-semibold">Business summary</h2>
@@ -160,7 +153,7 @@ export default function LiveDashboard() {
           </p>
         )}
       </section>
-    </DashboardShell>
+    </>
   );
 }
 
@@ -176,5 +169,53 @@ function DashboardMetric({ label, value, href }: { label: string; value: string 
     <Link href={href} className="block rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10">
       {content}
     </Link>
+  );
+}
+
+/* ---------- Loading skeleton (matches the real layout so nothing jumps) ---------- */
+
+function Bar({ className = "" }: { className?: string }) {
+  return <div aria-hidden="true" className={`rounded bg-white/10 motion-safe:animate-pulse ${className}`} />;
+}
+
+function DashboardSkeleton() {
+  return (
+    <div role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">Loading dashboard…</span>
+
+      <Bar className="h-6 w-40" />
+
+      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <Bar className="h-5 w-36" />
+        <Bar className="mt-2 h-3 w-64 max-w-full" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-xl bg-white/5 p-4">
+              <Bar className="h-3 w-24" />
+              <Bar className="mt-3 h-6 w-16" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <Bar className="h-5 w-44" />
+        <div className="mt-4 space-y-3">
+          <Bar className="h-4 w-48" />
+          <Bar className="h-4 w-40" />
+          <Bar className="h-4 w-72 max-w-full" />
+          <Bar className="h-4 w-56 max-w-full" />
+        </div>
+      </section>
+
+      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <Bar className="h-5 w-32" />
+        <div className="mt-4 space-y-3">
+          <Bar className="h-4 w-full" />
+          <Bar className="h-4 w-full" />
+          <Bar className="h-4 w-3/4" />
+        </div>
+      </section>
+    </div>
   );
 }
