@@ -361,6 +361,7 @@ export default function SalesPage() {
 
   return (
     <DashboardShell title="Sales">
+      <style jsx global>{`@media print { body * { visibility: hidden !important; } .sale-receipt-print, .sale-receipt-print * { visibility: visible !important; } .sale-receipt-print { position: absolute; inset: 0; width: 100%; color: #111 !important; background: #fff !important; border: 0 !important; } .sale-receipt-print pre { color: #111 !important; background: #fff !important; } }`}</style>
       {message && (
         <p role="status" className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">
           {message}
@@ -680,6 +681,8 @@ export default function SalesPage() {
                 <th className="px-3 py-3">SALE</th>
                 <th className="px-3 py-3">CUSTOMER</th>
                 <th className="px-3 py-3">TOTAL</th>
+                <th className="px-3 py-3">PAID</th>
+                <th className="px-3 py-3">BALANCE</th>
                 <th className="px-3 py-3">ACTIONS</th>
               </tr>
             </thead>
@@ -694,9 +697,11 @@ export default function SalesPage() {
                   <td className="px-3 py-3">
                     {sale.customer_id ? `#${sale.customer_id}` : "Walk-in"}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {money(Number(sale.total_amount))}
                   </td>
+                  <td className="px-3 py-3 whitespace-nowrap">{money(Number(sale.amount_paid))}</td>
+                  <td className={`px-3 py-3 whitespace-nowrap ${Number(sale.balance) > 0 ? "text-orange-300" : "text-white/50"}`}>{money(Number(sale.balance))}</td>
                   <td className="px-3 py-3">
                     <div className="flex gap-2">
                       <button
@@ -721,7 +726,7 @@ export default function SalesPage() {
               {!loading && sales.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={7}
                     className="px-3 py-10 text-center text-white/30"
                   >
                     No sales yet.
@@ -755,29 +760,35 @@ export default function SalesPage() {
       )}
 
       {receipt && (
-        <section className="mt-6 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
+        <section className="sale-receipt-print mt-6 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">
               Receipt #{receipt.sale_id}
             </h2>
-            <button
-              type="button"
-              onClick={() => setReceipt(null)}
-              className="text-sm text-white/40"
-            >
-              Close
-            </button>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => window.print()} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Print receipt</button>
+              <button
+                type="button"
+                onClick={() => setReceipt(null)}
+                className="text-sm text-white/40"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Stat
               label="Total"
               value={money(Number(receipt.total_amount))}
             />
             <Stat
               label="Customer"
-              value={receipt.customer_id ? `#${receipt.customer_id}` : "Walk-in"}
+              value={receipt.customer_id ? (customers.find((customer) => customer.id === receipt.customer_id)?.name ?? `#${receipt.customer_id}`) : "Walk-in"}
             />
+            <Stat label="Amount paid" value={money(Number(receipt.amount_paid))} />
+            <Stat label="Outstanding balance" value={money(Number(receipt.balance))} />
+            <Stat label="Payment status" value={Number(receipt.balance) <= 0 ? "Paid" : Number(receipt.amount_paid) <= 0 ? "Unpaid" : "Partially paid"} />
             <Stat
               label="Date"
               value={new Date(receipt.created_at).toLocaleString()}

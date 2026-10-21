@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function DashboardShell({ children, title }: DashboardShellProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const tour = useOptionalTour();
   const pathname = usePathname();
   const storeName = user?.store_name ?? "Store";
@@ -105,15 +105,6 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
             );
           })}
         </ul>
-        <div className="mt-4 border-t border-white/10 pt-4">
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="w-full rounded-md px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200"
-          >
-            Sign out
-          </button>
-        </div>
       </nav>
 
       <div className="min-w-0 flex-1">
