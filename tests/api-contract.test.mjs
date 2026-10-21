@@ -43,6 +43,20 @@ test("checkout connects customer creation, sale balances, and updated receipt di
   assert.match(types, /export type SaleSummary = \{[\s\S]*?amount_paid: string;[\s\S]*?balance: string;/);
 });
 
+test("sales receipt renders detailed item and payment breakdown instead of raw server text", () => {
+  const page = source("app/sales/page.tsx");
+  assert.match(page, /receipt-document/);
+  assert.match(page, /Items purchased/);
+  assert.match(page, /Unit price/);
+  assert.match(page, /Subtotal/);
+  assert.match(page, /receipt\.items\.map/);
+  assert.match(page, /products\.find\(\(product\) => product\.id === item\.product_id\)/);
+  assert.match(page, /Payment method/);
+  assert.match(page, /Outstanding balance/);
+  assert.match(page, /Thank you for your purchase/);
+  assert.doesNotMatch(page, /<pre className="mt-4[\s\S]*?receipt\.printable_text/);
+});
+
 test("debts page records payments through the supported store-scoped payment contract", () => {
   const page = source("app/debts/page.tsx");
   assert.match(page, /\/customers\/owes\?store_id=/);
@@ -58,6 +72,15 @@ test("debts page records payments through the supported store-scoped payment con
   assert.match(page, /paymentHistory\.payments\.map/);
   assert.match(page, /Retry payment/);
   assert.doesNotMatch(page, /\/api\/debts/);
+});
+
+test("payment refresh failures do not leave an accepted payment retryable or masquerade as empty history", () => {
+  const page = source("app/debts/page.tsx");
+  assert.match(page, /setPendingPayment\(null\);[\s\S]*?Refreshing the balance and receipt/);
+  assert.match(page, /Payment was accepted by the server, but payment history refresh failed/);
+  assert.match(page, /Payment history could not be verified:/);
+  assert.match(page, /historyError \? \(/);
+  assert.match(page, /Retry only with the same transaction ID/);
 });
 
 test("settings page does not call unsupported store mutation routes", () => {

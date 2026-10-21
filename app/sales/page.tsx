@@ -795,9 +795,55 @@ export default function SalesPage() {
             />
           </div>
 
-          <pre className="mt-4 overflow-x-auto rounded-xl bg-black/40 p-4 text-xs text-white/70">
-            {receipt.printable_text}
-          </pre>
+          <div className="receipt-document mt-4 rounded-xl bg-black/40 p-5 text-sm">
+            <header className="receipt-header border-b border-white/15 pb-4 text-center">
+              <p className="text-lg font-bold tracking-wide">{user?.store_name || "RetailOS"}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/60">Sales receipt</p>
+              <p className="mt-2 font-semibold">Receipt #{receipt.sale_id}</p>
+            </header>
+
+            <dl className="receipt-meta grid grid-cols-1 gap-x-6 gap-y-2 border-b border-white/15 py-4 sm:grid-cols-2">
+              <div className="flex justify-between gap-3"><dt className="text-white/50">Date</dt><dd className="text-right">{new Date(receipt.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-white/50">Customer</dt><dd className="text-right">{receipt.customer_id ? (customers.find((customer) => customer.id === receipt.customer_id)?.name ?? `Customer #${receipt.customer_id}`) : "Walk-in customer"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-white/50">Payment method</dt><dd className="text-right">{sales.find((sale) => sale.id === receipt.sale_id)?.payment_method ?? "See payment record"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-white/50">Status</dt><dd className="text-right font-medium">{Number(receipt.balance) <= 0 ? "Paid" : Number(receipt.amount_paid) <= 0 ? "Unpaid" : "Partially paid"}</dd></div>
+            </dl>
+
+            <div className="receipt-items py-4">
+              <h3 className="mb-3 font-semibold">Items purchased</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] text-left">
+                  <thead className="border-b border-white/15 text-xs text-white/50">
+                    <tr><th className="pb-2 pr-3 font-medium">Item</th><th className="pb-2 px-2 text-right font-medium">Qty</th><th className="pb-2 px-2 text-right font-medium">Unit price</th><th className="pb-2 pl-2 text-right font-medium">Subtotal</th></tr>
+                  </thead>
+                  <tbody>
+                    {receipt.items.map((item, index) => {
+                      const productName = products.find((product) => product.id === item.product_id)?.name ?? `Product #${item.product_id}`;
+                      const quantityLabel = `${item.quantity}${item.unit_name ? ` ${item.unit_name}` : ""}`;
+                      const unitPrice = item.price_at_sale != null ? Number(item.price_at_sale) : Number(item.total) / Math.max(Number(item.quantity), 1);
+                      return <tr key={`${item.product_id}-${index}`} className="border-b border-white/5">
+                        <td className="py-3 pr-3"><span className="font-medium">{productName}</span>{item.base_quantity_deducted != null && item.base_unit ? <span className="mt-1 block text-xs text-white/45">Stock deducted: {item.base_quantity_deducted} {item.base_unit}</span> : null}</td>
+                        <td className="px-2 py-3 text-right whitespace-nowrap">{quantityLabel}</td>
+                        <td className="px-2 py-3 text-right whitespace-nowrap">{money(unitPrice)}</td>
+                        <td className="py-3 pl-2 text-right whitespace-nowrap">{money(Number(item.total))}</td>
+                      </tr>;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="receipt-totals ml-auto max-w-sm space-y-2 border-t border-white/15 pt-4">
+              <div className="flex justify-between gap-4"><span className="text-white/60">Total</span><strong>{money(Number(receipt.total_amount))}</strong></div>
+              <div className="flex justify-between gap-4"><span className="text-white/60">Amount paid</span><span>{money(Number(receipt.amount_paid))}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/60">Outstanding balance</span><strong className={Number(receipt.balance) > 0 ? "text-orange-300" : ""}>{money(Number(receipt.balance))}</strong></div>
+            </div>
+
+            <footer className="receipt-footer mt-5 border-t border-white/15 pt-4 text-center text-xs text-white/50">
+              <p>Thank you for your purchase.</p>
+              <p className="mt-1">Please keep this receipt for your records.</p>
+            </footer>
+          </div>
         </section>
       )}
     </DashboardShell>
