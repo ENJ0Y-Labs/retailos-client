@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -221,7 +221,7 @@ export default function SalesPage() {
     });
   }
 
-  async function createCustomer(event: React.FormEvent<HTMLFormElement>) {
+  async function createCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!storeId || creatingCustomer) return;
     if (duplicateContactCustomers.length > 0 && !allowDuplicateContact) {
