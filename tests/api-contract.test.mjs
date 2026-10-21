@@ -26,13 +26,21 @@ test("transaction details use the supported sale lookup route and store ID", () 
   assert.match(page, /api<\{ receipt: Receipt \}>/);
 });
 
-test("debts page lists supported customer balances without inventing repayment APIs", () => {
+test("debts page records payments through the supported store-scoped payment contract", () => {
   const page = source("app/debts/page.tsx");
   assert.match(page, /\/customers\/owes\?store_id=/);
-  assert.match(page, /total_outstanding/);
-  assert.match(page, /outstanding_balance/);
+  assert.match(page, /\/sales\?store_id=/);
+  assert.match(page, /\/sales\/payments/);
+  assert.match(page, /client_transaction_id:\s*request\.clientTransactionId/);
+  assert.match(page, /payment_method:\s*request\.paymentMethod/);
+  assert.match(page, /\/sales\/receipt/);
+  assert.match(page, /sale\.total_amount/);
+  assert.match(page, /sale\.amount_paid/);
+  assert.match(page, /sale\.balance/);
+  assert.match(page, /amount > remaining/);
+  assert.match(page, /paymentHistory\.payments\.map/);
+  assert.match(page, /Retry payment/);
   assert.doesNotMatch(page, /\/api\/debts/);
-  assert.doesNotMatch(page, /method:\s*["']POST["']/);
 });
 
 test("settings page does not call unsupported store mutation routes", () => {
