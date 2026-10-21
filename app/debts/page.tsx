@@ -221,6 +221,7 @@ export default function DebtsPage() {
 
   return (
     <DashboardShell title="Who Owes Me">
+      <style jsx global>{`@media print { body * { visibility: hidden !important; } .payment-receipt, .payment-receipt * { visibility: visible !important; } .payment-receipt { position: absolute; inset: 0; width: 100%; color: #111 !important; background: #fff !important; border: 0 !important; } .payment-receipt pre { color: #111 !important; } }`}</style>
       {message && <p role="status" className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
@@ -356,7 +357,7 @@ export default function DebtsPage() {
           </div>
 
           {updatedReceipt && (
-            <section className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
+            <section className="payment-receipt mt-5 rounded-xl border border-white/10 bg-black/20 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="font-semibold">Updated receipt · Sale #{updatedReceipt.sale_id}</h3>
                 <button type="button" onClick={() => window.print()} className="rounded-lg border border-white/10 px-3 py-2 text-sm hover:bg-white/5">Print receipt</button>
