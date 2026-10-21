@@ -130,13 +130,15 @@ export default function DebtsPage() {
     setHistoryLoading(true);
     try {
       const params = new URLSearchParams({ store_id: String(storeId), sale_id: String(sale.id) });
-      const data = await api<PaymentHistory>(`/sales/payments?${params.toString()}`);
+      const data = await api<PaymentHistory>(`/sales/payments?${params.toString()}`, { refresh: true });
       setPaymentHistory(data);
       setHistoryError("");
     } catch (cause) {
-      const reason = cause instanceof Error ? cause.message : "Unable to load payment history.";
+      const status = typeof cause === "object" && cause !== null && "status" in cause ? Number((cause as { status?: unknown }).status) : 0;
+      const reason = status === 404
+        ? "The connected server does not expose the payment-history endpoint. Deploy the latest retailos-server version, then refresh this sale."
+        : cause instanceof Error ? cause.message : "Unable to load payment history.";
       setHistoryError(reason);
-      setError(reason);
     } finally {
       setHistoryLoading(false);
     }
@@ -196,17 +198,20 @@ export default function DebtsPage() {
       const params = new URLSearchParams({ store_id: String(storeId), sale_id: String(selectedSale.id) });
       let historyData: PaymentHistory | null = null;
       try {
-        historyData = await api<PaymentHistory>(`/sales/payments?${params.toString()}`);
+        historyData = await api<PaymentHistory>(`/sales/payments?${params.toString()}`, { refresh: true });
         setPaymentHistory(historyData);
         setHistoryError("");
         setSelectedSale((current) => current ? { ...current, total_amount: historyData!.total_amount, amount_paid: historyData!.amount_paid, balance: historyData!.balance } : current);
         setSales((current) => Number(historyData!.balance) > 0
           ? current.map((sale) => sale.id === selectedSale.id ? { ...sale, total_amount: historyData!.total_amount, amount_paid: historyData!.amount_paid, balance: historyData!.balance } : sale)
           : current.filter((sale) => sale.id !== selectedSale.id));
+        // Derive the collected delta from authoritative sale totals. This avoids
+        // subtracting the same amount twice if the server returns an idempotent replay.
+        const newlyCollected = Math.max(0, Number(historyData!.amount_paid) - Number(selectedSale.amount_paid));
         setCustomers((current) => current.map((customer) => customer.id === selectedSale.customer_id
-          ? { ...customer, outstanding_balance: Math.max(0, Number(customer.outstanding_balance) - Number(request.amount)).toFixed(2) }
+          ? { ...customer, outstanding_balance: Math.max(0, Number(customer.outstanding_balance) - newlyCollected).toFixed(2) }
           : customer));
-        setTotalOutstanding((current) => Math.max(0, Number(current) - Number(request.amount)).toFixed(2));
+        setTotalOutstanding((current) => Math.max(0, Number(current) - newlyCollected).toFixed(2));
         setMessage(`Payment of ${money(request.amount)} recorded against sale #${selectedSale.id}. Remaining balance: ${money(historyData!.balance)}.`);
       } catch (cause) {
         const reason = cause instanceof Error ? cause.message : "Payment was accepted, but the updated payment history could not be loaded.";

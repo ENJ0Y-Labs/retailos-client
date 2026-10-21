@@ -83,6 +83,14 @@ test("payment refresh failures do not leave an accepted payment retryable or mas
   assert.match(page, /Retry only with the same transaction ID/);
 });
 
+test("debt payment history bypasses cached reads and explains a missing backend route", () => {
+  const page = source("app/debts/page.tsx");
+  assert.match(page, /api<PaymentHistory>\(\`\/sales\/payments\?\$\{params\.toString\(\)\}\`, \{ refresh: true \}\)/);
+  assert.match(page, /does not expose the payment-history endpoint/);
+  assert.match(page, /const newlyCollected = Math\.max\(0, Number\(historyData!\.amount_paid\) - Number\(selectedSale\.amount_paid\)\)/);
+  assert.match(page, /max=\{paymentHistory\?\.balance \?\? selectedSale\.balance\}/);
+});
+
 test("settings page does not call unsupported store mutation routes", () => {
   const page = source("app/settings/page.tsx");
   assert.match(page, /user\?\.store_name/);
