@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -17,6 +17,8 @@ type CartItem = {
   quantity: number;
   price: number;
 };
+
+const normalizePhone = (value: string) => value.replace(/\D/g, "");
 
 const money = (value: number) =>
   "₦" +
@@ -37,6 +39,11 @@ export default function SalesPage() {
   const [query, setQuery] = useState("");
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerId, setCustomerId] = useState("");
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerContact, setNewCustomerContact] = useState("");
+  const [allowDuplicateContact, setAllowDuplicateContact] = useState(false);
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [paid, setPaid] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -98,6 +105,18 @@ export default function SalesPage() {
   useEffect(() => {
     void Promise.resolve().then(() => load());
   }, [load]);
+
+  const filteredCustomers = useMemo(() => {
+    const term = customerQuery.trim().toLowerCase();
+    if (!term) return customers;
+    return customers.filter((customer) => customer.name.toLowerCase().includes(term) || (customer.contact ?? "").toLowerCase().includes(term));
+  }, [customers, customerQuery]);
+
+  const duplicateContactCustomers = useMemo(() => {
+    const normalized = normalizePhone(newCustomerContact);
+    if (normalized.length < 7) return [];
+    return customers.filter((customer) => normalizePhone(customer.contact ?? "") === normalized);
+  }, [customers, newCustomerContact]);
 
   const filteredProducts = useMemo(
     () =>
@@ -200,6 +219,30 @@ export default function SalesPage() {
       setError("");
       return items.map((item, itemIndex) => itemIndex === index ? updated : item);
     });
+  }
+
+  async function createCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!storeId || creatingCustomer) return;
+    if (duplicateContactCustomers.length > 0 && !allowDuplicateContact) {
+      setError("This phone number already belongs to a customer. Select the matching customer or confirm that this is a separate person.");
+      return;
+    }
+    setCreatingCustomer(true);
+    setError("");
+    try {
+      const data = await api<{ customer: Customer }>("/customers", { method: "POST", json: { store_id: storeId, name: newCustomerName.trim(), contact: newCustomerContact.trim() || null } });
+      setCustomers((current) => [...current, data.customer].sort((a, b) => a.name.localeCompare(b.name)));
+      setCustomerId(String(data.customer.id));
+      setCustomerQuery(data.customer.name);
+      setCustomerModalOpen(false);
+      setNewCustomerName("");
+      setNewCustomerContact("");
+      setAllowDuplicateContact(false);
+      setMessage(`Customer ${data.customer.name} created and selected for this sale.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to create customer.");
+    } finally { setCreatingCustomer(false); }
   }
 
   async function createSale() {
@@ -583,39 +626,28 @@ export default function SalesPage() {
 
           <label className="block text-sm">
             Search customers {balance > 0 ? "(required for credit)" : "(optional)"}
-            <input
-              className="field mt-2 w-full"
-              placeholder="Search customers..."
-              value={customerQuery}
-              onChange={(event) => {
-                setCustomerQuery(event.target.value);
-                setCustomerId("");
-              }}
-            />
+            <input className="field mt-2 w-full" placeholder="Search by name or phone..." value={customerQuery}
+              aria-label="Search customers by name or phone"
+              onChange={(event) => { setCustomerQuery(event.target.value); setCustomerId(""); }} />
           </label>
-
-          <select
-            aria-label="Select customer"
-            className="field mt-2 w-full"
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
-          >
-            <option value="">Walk-in customer</option>
-            {customers
-              .filter((customer) =>
-                customer.name
-                  .toLowerCase()
-                  .includes(customerQuery.toLowerCase()),
-              )
-              .map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                  {"phone" in customer && customer.phone
-                    ? ` (${customer.phone})`
-                    : ""}
-                </option>
-              ))}
-          </select>
+          <div className="mt-2 space-y-2" aria-label="Customer search results">
+            <button type="button" onClick={() => { setCustomerId(""); setCustomerQuery(""); }}
+              className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${!customerId ? "border-orange-500/50 bg-orange-500/10" : "border-white/10 bg-white/5"}`}>Walk-in customer</button>
+            {filteredCustomers.map((customer) => (
+              <button type="button" key={customer.id} onClick={() => { setCustomerId(String(customer.id)); setCustomerQuery(customer.name); }}
+                className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${customerId === String(customer.id) ? "border-orange-500/50 bg-orange-500/10" : "border-white/10 bg-white/5"}`}>
+                <span className="block font-medium">{customer.name}</span><span className="block text-xs text-white/45">{customer.contact || "No phone number"}</span>
+              </button>
+            ))}
+            {customerQuery.trim() && filteredCustomers.length === 0 && <p className="rounded-lg bg-white/5 p-3 text-sm text-white/60">No matching customer found.</p>}
+            {customerQuery.trim() && filteredCustomers.length === 0 && (
+              <button type="button" onClick={() => { setNewCustomerName(customerQuery.trim()); setNewCustomerContact(""); setAllowDuplicateContact(false); setError(""); setCustomerModalOpen(true); }}
+                className="w-full rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-3 text-left text-sm text-orange-200">
+                Create new customer: <strong>{customerQuery.trim()}</strong>
+              </button>
+            )}
+            {customerId && <p className="text-xs text-green-300" role="status">Selected: {customers.find((customer) => String(customer.id) === customerId)?.name ?? "Customer"}</p>}
+          </div>
 
           <button
             type="button"
@@ -700,6 +732,27 @@ export default function SalesPage() {
           </table>
         </div>
       </section>
+
+      {customerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" role="presentation"
+          onMouseDown={(event) => { if (event.target === event.currentTarget && !creatingCustomer) setCustomerModalOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="create-customer-title" className="w-full max-w-md rounded-2xl border border-white/10 bg-[#151515] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4"><div><h2 id="create-customer-title" className="text-lg font-semibold">Create customer</h2><p className="mt-1 text-sm text-white/55">The current sale will stay as it is.</p></div>
+              <button type="button" disabled={creatingCustomer} onClick={() => setCustomerModalOpen(false)} className="text-sm text-white/50 disabled:opacity-40">Close</button></div>
+            <form onSubmit={createCustomer} className="mt-5 space-y-4">
+              <label className="block text-sm">Customer name<input required minLength={2} autoFocus className="field mt-2 w-full" value={newCustomerName} onChange={(event) => setNewCustomerName(event.target.value)} placeholder="e.g. Mrs Adeyemi" /></label>
+              <label className="block text-sm">Phone number <span className="text-white/40">(optional)</span><input type="tel" className="field mt-2 w-full" value={newCustomerContact} onChange={(event) => { setNewCustomerContact(event.target.value); setAllowDuplicateContact(false); }} placeholder="e.g. 0803 000 0000" /></label>
+              {duplicateContactCustomers.length > 0 && <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-3">
+                <p className="text-sm font-medium text-amber-200">This phone number is already in use.</p><p className="mt-1 text-xs text-white/60">Check whether this is the same customer before creating another record.</p>
+                <div className="mt-3 space-y-2">{duplicateContactCustomers.map((customer) => <button type="button" key={customer.id} onClick={() => { setCustomerId(String(customer.id)); setCustomerQuery(customer.name); setCustomerModalOpen(false); setNewCustomerName(""); setNewCustomerContact(""); setAllowDuplicateContact(false); }} className="w-full rounded-lg bg-white/10 px-3 py-2 text-left text-sm">Use existing customer: <strong>{customer.name}</strong><span className="block text-xs text-white/50">{customer.contact}</span></button>)}</div>
+                <label className="mt-3 flex items-start gap-2 text-xs text-white/75"><input type="checkbox" checked={allowDuplicateContact} onChange={(event) => setAllowDuplicateContact(event.target.checked)} className="mt-0.5" />I verified this is a different person. Create a separate customer record.</label>
+              </div>}
+              <div className="flex gap-3 pt-1"><button type="button" disabled={creatingCustomer} onClick={() => setCustomerModalOpen(false)} className="flex-1 rounded-xl bg-white/10 px-4 py-3 text-sm">Cancel</button>
+                <button type="submit" disabled={creatingCustomer || (duplicateContactCustomers.length > 0 && !allowDuplicateContact)} className="flex-1 rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:opacity-40">{creatingCustomer ? "Creating..." : "Create and select"}</button></div>
+            </form>
+          </section>
+        </div>
+      )}
 
       {receipt && (
         <section className="mt-6 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
