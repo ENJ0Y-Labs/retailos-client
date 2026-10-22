@@ -350,7 +350,12 @@ export default function SalesPage() {
         // The in-memory transaction ID is still retained.
       }
 
-      setError(e instanceof Error ? e.message : "Unable to complete sale.");
+      const failure = e instanceof Error ? e.message : "Unable to complete sale.";
+      setError(
+        /price.*chang|chang.*price/i.test(failure)
+          ? "A product price changed before the sale could be completed. The sale was not completed. Refresh the cart and review the updated total before trying again."
+          : failure,
+      );
     } finally {
       checkoutLock.current = false;
       setSubmitting(false);
