@@ -83,6 +83,7 @@ export default function SalesPage() {
       const [productData, customerData, salesData] = await Promise.all([
         api<{ products: SalesProduct[] }>(
           `/product/list?store_id=${encodeURIComponent(String(storeId))}`,
+          { refresh: true },
         ),
         api<{ customers: Customer[] }>(
           `/customers?store_id=${encodeURIComponent(String(storeId))}`,
@@ -264,6 +265,36 @@ export default function SalesPage() {
 
     if (balance > 0 && !customerId) {
       setError("Select a customer before recording an unpaid balance.");
+      return;
+    }
+
+    // Re-read authoritative product data immediately before checkout because an open cart may contain stale prices.
+    try {
+      const latest = await api<{ products: SalesProduct[] }>(
+        `/product/list?store_id=${encodeURIComponent(String(storeId))}`,
+        { refresh: true },
+      );
+      const latestById = new Map((latest.products ?? []).map((product) => [product.id, product]));
+      let priceChanged = false;
+      const refreshedCart = cart.map((item) => {
+        const currentProduct = latestById.get(item.product.id);
+        const currentUnit = currentProduct?.units?.find((unit) => unit.id === item.unitId);
+        if (!currentProduct || !currentUnit) { priceChanged = true; return item; }
+        const currentPrice = Number(currentUnit.price);
+        // Service prices may be intentionally overridden for an individual sale.
+        const nextPrice = isServiceProduct(currentProduct) ? item.price : currentPrice;
+        if (!isServiceProduct(currentProduct) && currentPrice !== item.price) priceChanged = true;
+        return { ...item, product: currentProduct, price: nextPrice };
+      });
+      setProducts(latest.products ?? []);
+      if (priceChanged) {
+        setCart(refreshedCart);
+        setMessage("Product prices or selling units changed while this cart was open. The cart has been refreshed and the total recalculated. Review the updated total before completing the sale.");
+        return;
+      }
+      setCart(refreshedCart);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to verify current product prices. Refresh the products and try again.");
       return;
     }
 
