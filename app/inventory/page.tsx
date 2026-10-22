@@ -23,6 +23,7 @@ export default function InventoryPage() {
     productType: "Physical" as ProductType,
     baseUnit: "piece",
   });
+  const isService = form.productType === "Service";
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -79,6 +80,19 @@ export default function InventoryPage() {
     });
   }
 
+  function changeProductType(productType: ProductType) {
+    setForm((current) => ({
+      ...current,
+      productType,
+      ...(productType === "Service"
+        ? { stock: "0", threshold: "", baseUnit: "piece" }
+        : current.productType === "Service"
+          ? { stock: "0", threshold: "", baseUnit: "piece" }
+          : {}),
+    }));
+    setError("");
+  }
+
   function beginEdit(product: Product) {
     setEditing(product.id);
     setForm({
@@ -105,25 +119,35 @@ export default function InventoryPage() {
         store_id: id,
         name: form.name.trim(),
         price: Number(form.price),
-        base_unit: form.baseUnit.trim(),
-        low_stock_threshold: form.threshold === "" ? null : Number(form.threshold),
+        product_type: form.productType,
+        // The current create API expects a base_unit; services use a neutral fallback.
+        base_unit: isService ? "piece" : form.baseUnit.trim(),
       };
       if (editing) {
         await api("/product/update", {
           method: "PATCH",
-          json: { ...commonPayload, id: editing, stock_quantity: Number(form.stock) },
+          json: {
+            ...commonPayload,
+            id: editing,
+            ...(isService ? {} : {
+              stock_quantity: Number(form.stock),
+              low_stock_threshold: form.threshold === "" ? null : Number(form.threshold),
+            }),
+          },
         });
-        setMessage("Product updated.");
+        setMessage(isService ? "Service updated." : "Product updated.");
       } else {
         await api("/product/create", {
           method: "POST",
           json: {
             ...commonPayload,
-            product_type: form.productType,
-            opening_stock: Number(form.stock),
+            ...(isService ? {} : {
+              opening_stock: Number(form.stock),
+              low_stock_threshold: form.threshold === "" ? null : Number(form.threshold),
+            }),
           },
         });
-        setMessage("Product created.");
+        setMessage(isService ? "Service created." : "Product created.");
       }
       reset();
       await loadProducts();
@@ -193,18 +217,20 @@ export default function InventoryPage() {
     <DashboardShell title="Inventory">
       {message && <p role="status" className="mb-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">{message}</p>}
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      <form onSubmit={save} data-tour="inventory-form" aria-label={editing ? "Edit product" : "Add a product"} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-4">
-        <label className="block text-xs text-white/75">Product name<input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. Rice 50kg" /></label>
-        <label className="block text-xs text-white/75">Price (₦)<input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field mt-1 text-sm" placeholder="0.00" /></label>
-        <label className="block text-xs text-white/75">{editing ? "Stock quantity" : "Opening stock"}<input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field mt-1 text-sm" placeholder="0" /></label>
-        <label className="block text-xs text-white/75">Product type<select value={form.productType} onChange={(e) => setForm({ ...form, productType: e.target.value as ProductType })} className="field mt-1 text-sm" disabled={Boolean(editing)}>
-          <option value="Physical">Physical product</option>
+      <form onSubmit={save} data-tour="inventory-form" aria-label={editing ? (isService ? "Edit service" : "Edit product") : (isService ? "Add a service" : "Add a product")} className="grid gap-3 rounded-2xl border border-white/10 bg-[#151515] p-5 md:grid-cols-4">
+        <label className="block text-xs text-white/75">Item type<select value={form.productType} onChange={(e) => changeProductType(e.target.value as ProductType)} className="field mt-1 text-sm">
+          <option value="Physical">Product</option>
           <option value="Service">Service</option>
         </select></label>
-        <label className="block text-xs text-white/75">Base unit<input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. piece" disabled={form.productType === "Service"} /></label>
-        <label className="block text-xs text-white/75">Low-stock threshold (optional)<input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field mt-1 text-sm" placeholder="Alert me at or below…" /></label>
+        <label className="block text-xs text-white/75">{isService ? "Service name" : "Product name"}<input required minLength={2} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field mt-1 text-sm" placeholder={isService ? "e.g. Delivery service" : "e.g. Rice 50kg"} /></label>
+        <label className="block text-xs text-white/75">Price (₦)<input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field mt-1 text-sm" placeholder="0.00" /></label>
+        {!isService && <>
+          <label className="block text-xs text-white/75">{editing ? "Stock quantity" : "Opening stock"}<input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field mt-1 text-sm" placeholder="0" /></label>
+          <label className="block text-xs text-white/75">Base unit<input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. piece" /></label>
+          <label className="block text-xs text-white/75">Low-stock threshold (optional)<input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field mt-1 text-sm" placeholder="Alert me at or below…" /></label>
+        </>}
         <div className="flex gap-2 md:col-span-4">
-          <button disabled={pendingAction !== null} className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50">{pendingAction === "save" ? "Saving..." : editing ? "Save changes" : "Add product"}</button>
+          <button disabled={pendingAction !== null} className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50">{pendingAction === "save" ? "Saving..." : editing ? "Save changes" : isService ? "Add service" : "Add product"}</button>
           {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
@@ -217,20 +243,20 @@ export default function InventoryPage() {
               <tr key={product.id} className="border-t border-white/5">
                 <td className="px-3 py-4">{product.name}</td>
                 <td className="px-3 py-4">{product.product_type}</td>
-                <td className="px-3 py-4">{product.base_unit}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : product.base_unit}</td>
                 <td className="px-3 py-4">
-                  <div className="space-y-1">
+                  {product.product_type === "Service" ? <span className="text-white/30">Not applicable</span> : <div className="space-y-1">
                     {(product.units ?? []).map((unit) => (
                       <p key={unit.id} className="whitespace-nowrap text-xs text-white/60">
                         {unit.name}: {unit.base_quantity} {product.base_unit} · ₦{Number(unit.price).toLocaleString("en-NG")}
                       </p>
                     ))}
                     {!product.units?.length && <span className="text-white/30">No units configured</span>}
-                  </div>
+                  </div>}
                 </td>
                 <td className="px-3 py-4">₦{Number(product.price).toLocaleString()}</td>
-                <td className="px-3 py-4">{product.stock_quantity} {product.base_unit}</td>
-                <td className="px-3 py-4">{product.low_stock_threshold ?? "—"}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : `${product.stock_quantity} ${product.base_unit}`}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : product.low_stock_threshold ?? "—"}</td>
                 <td className="px-3 py-4"><div className="flex flex-wrap gap-2">
                   <button disabled={pendingAction !== null} onClick={() => adjust(product, 1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-40">{pendingAction === "adjust-" + product.id ? "Updating..." : "+1"}</button>
                   <button disabled={pendingAction !== null || product.stock_quantity <= 0} onClick={() => adjust(product, -1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-30">-1</button>
