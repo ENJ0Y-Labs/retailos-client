@@ -27,6 +27,10 @@ export default function InventoryPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [receivingForm, setReceivingForm] = useState({ productId: "", quantity: "", unitCost: "", receivedAt: new Date().toISOString().slice(0, 10), source: "" });
+  const receivingProduct = products.find((product) => String(product.id) === receivingForm.productId);
+  const receivingTotal = Number(receivingForm.quantity) * Number(receivingForm.unitCost);
+  const receivingMovements = movements.filter((movement) => (movement.reason ?? "").startsWith("Stock received"));
   const actionLock = useRef(false);
 
   useEffect(() => {
@@ -171,6 +175,44 @@ export default function InventoryPage() {
     }
   }
 
+  async function receiveStock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (actionLock.current) return;
+    const product = receivingProduct;
+    const quantity = Number(receivingForm.quantity);
+    const unitCost = Number(receivingForm.unitCost);
+    if (!product || product.product_type !== "Physical") { setError("Choose a physical product before recording received stock."); return; }
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) { setError("Quantity must be a whole number greater than zero."); return; }
+    if (!Number.isFinite(unitCost) || unitCost < 0 || receivingForm.unitCost.trim() === "" || Math.abs(unitCost * 100 - Math.round(unitCost * 100)) > 1e-7) {
+      setError("Enter a valid unit cost of zero or more, with no more than two decimal places."); return;
+    }
+    if (!receivingForm.receivedAt) { setError("Choose the date the stock was received."); return; }
+    if (!Number.isFinite(receivingTotal) || receivingTotal > Number.MAX_SAFE_INTEGER) { setError("The receiving total is outside the supported amount range."); return; }
+    actionLock.current = true;
+    setPendingAction("receive");
+    setError("");
+    setMessage("");
+    try {
+      const id = storeId;
+      if (!id) throw new Error("No store is associated with this account");
+      const source = receivingForm.source.trim();
+      const reason = [
+        "Stock received",
+        `Unit cost: ₦${unitCost.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per ${product.base_unit}`,
+        `Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        `Received on: ${receivingForm.receivedAt}`,
+        source ? `Supplier/source: ${source}` : "",
+      ].filter(Boolean).join(" | ");
+      await api("/product/adjust", { method: "POST", json: { store_id: id, id: product.id, quantity_change: quantity, reason } });
+      setReceivingForm({ productId: "", quantity: "", unitCost: "", receivedAt: new Date().toISOString().slice(0, 10), source: "" });
+      setMessage(`Received ${quantity} ${product.base_unit} of ${product.name}. Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
+      await Promise.all([loadProducts(), loadMovements()]);
+    } catch (e) {
+      setMessage("");
+      setError(e instanceof Error ? e.message : "Unable to record stock receiving");
+    } finally { actionLock.current = false; setPendingAction(null); }
+  }
+
   async function adjust(product: Product, change: number) {
     if (actionLock.current) return;
     actionLock.current = true;
@@ -234,6 +276,19 @@ export default function InventoryPage() {
           {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
+      <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <div className="mb-4"><h2 className="font-semibold">Receive stock</h2><p className="mt-1 text-xs text-white/45">Record incoming stock and its cost. Quantity is entered in the product's configured base unit.</p></div>
+        <form onSubmit={receiveStock} aria-label="Receive stock form" className="grid gap-3 md:grid-cols-3">
+          <label className="block text-xs text-white/75">Product<select required value={receivingForm.productId} onChange={(e) => setReceivingForm({ ...receivingForm, productId: e.target.value })} className="field mt-1 text-sm"><option value="">Choose a product</option>{products.filter((product) => product.product_type === "Physical").map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>
+          <label className="block text-xs text-white/75">Quantity received<input required min="1" step="1" type="number" value={receivingForm.quantity} onChange={(e) => setReceivingForm({ ...receivingForm, quantity: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. 10" /></label>
+          <label className="block text-xs text-white/75">Unit<input readOnly value={receivingProduct?.base_unit ?? ""} className="field mt-1 text-sm" placeholder="Select a product first" aria-label="Receiving unit (product base unit)" /></label>
+          <label className="block text-xs text-white/75">Cost per unit (₦)<input required min="0" step="0.01" type="number" value={receivingForm.unitCost} onChange={(e) => setReceivingForm({ ...receivingForm, unitCost: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. 5000" /></label>
+          <label className="block text-xs text-white/75">Receiving date<input required type="date" value={receivingForm.receivedAt} onChange={(e) => setReceivingForm({ ...receivingForm, receivedAt: e.target.value })} className="field mt-1 text-sm" /></label>
+          <label className="block text-xs text-white/75">Supplier or source (optional)<input maxLength={120} value={receivingForm.source} onChange={(e) => setReceivingForm({ ...receivingForm, source: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. Main distributor" /></label>
+          <div className="rounded-xl border border-orange-500/25 bg-orange-500/5 p-3 md:col-span-3"><p className="text-xs text-white/60">Total receiving cost</p><p className="mt-1 text-xl font-semibold text-orange-300">₦{Number.isFinite(receivingTotal) && receivingForm.quantity !== "" && receivingForm.unitCost !== "" ? receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}</p><p className="mt-1 text-xs text-white/40">Quantity × cost per unit. This is separate from the product's selling price.</p></div>
+          <div className="md:col-span-3"><button disabled={pendingAction !== null || !products.some((product) => product.product_type === "Physical")} className="rounded-xl bg-orange-500 px-4 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50">{pendingAction === "receive" ? "Recording receipt..." : "Record stock received"}</button></div>
+        </form>
+      </section>
       <div data-tour="inventory-import"><CsvImport storeId={storeId} onImported={loadProducts} /></div>
       <section data-tour="inventory-table" className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
         <table className="w-full text-left text-sm">
@@ -269,6 +324,13 @@ export default function InventoryPage() {
             {!products.length && <tr><td colSpan={8} className="px-3 py-10 text-center text-white/70">No products yet. Fill in the form above and press “Add product”, or import a CSV file.</td></tr>}
           </tbody>
         </table>
+      </section>
+      <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
+        <div><h2 className="font-semibold">Stock receiving history</h2><p className="mt-1 text-xs text-white/35">Previous receiving entries are shown from the server's inventory movement history.</p></div>
+        <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-white/40"><tr><th className="px-3 py-3">RECORDED</th><th className="px-3 py-3">PRODUCT ID</th><th className="px-3 py-3">QUANTITY ADDED</th><th className="px-3 py-3">RECEIVING DETAILS</th></tr></thead><tbody>
+          {receivingMovements.map((movement) => <tr key={movement.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(movement.created_at)}</td><td className="px-3 py-3">#{movement.product_id}</td><td className="px-3 py-3">+{movement.quantity_change}</td><td className="px-3 py-3">{movement.reason}</td></tr>)}
+          {!receivingMovements.length && <tr><td colSpan={4} className="px-3 py-10 text-center text-white/30">No stock receiving records yet.</td></tr>}
+        </tbody></table></div>
       </section>
       <section data-tour="inventory-movements" className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="flex items-center justify-between gap-3">
