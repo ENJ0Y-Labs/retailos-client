@@ -187,7 +187,12 @@ export default function TransactionsPage() {
           <div className="mt-4 space-y-2">
             {selectedReceipt.items.map((item, index) => (
               <div key={`${item.product_id}-${index}`} className="flex justify-between gap-4 border-b border-white/5 py-2 text-sm">
-                <span>Product #{item.product_id} · {item.quantity} {item.unit_name ?? ""}</span>
+                <span>
+                  Product #{item.product_id} · {item.quantity} {item.unit_name ?? ""}
+                  <span className="mt-1 block text-xs text-white/45">
+                    Unit price at sale: {money(item.price_at_sale ?? (Number(item.total) / Math.max(item.quantity, 1)))}
+                  </span>
+                </span>
                 <span>{money(item.total)}</span>
               </div>
             ))}
