@@ -84,6 +84,9 @@ export async function api<T = unknown>(path: string, init: ApiInit = {}): Promis
     );
   }
 
+  // Mutations may invalidate any cached read, including product prices and sale totals.
+  if (!isGet) GET_CACHE.clear();
+
   const result = (body?.data ?? body) as T;
   if (cacheKey) setCached(cacheKey, result);
   return result;
