@@ -98,7 +98,7 @@ export default function ItemsPage() {
   }
 
   return (
-    <DashboardShell title="Products">
+    <DashboardShell title="Products & Services">
       {error && <p className="mb-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
       <input value={query} onChange={(e) => setQuery(e.target.value)} className="field mb-4 max-w-xl" placeholder="Search products and services…" />
 
@@ -150,7 +150,7 @@ export default function ItemsPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((product) => (
           <article key={product.id} className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-            <p className="text-xs text-white/35">Product #{product.id}</p>
+            <p className="text-xs text-white/35">{product.product_type === "Service" ? "Service" : "Product"} #{product.id}</p>
             <h2 className="mt-2 font-semibold">{product.name}</h2>
             <p className="mt-2 text-lg text-orange-400">₦{Number(product.price).toLocaleString()}</p>
             <p className="mt-1 text-xs text-white/45">{product.product_type === "Service" ? "Service" : "Product"}</p>
