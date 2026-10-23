@@ -357,6 +357,19 @@ export default function SalesPage() {
     }
   }
 
+  function pendingReviewTotal(sale: PendingSale): number | null {
+    if (!sale.catalog) return null;
+    return sale.payload.items.reduce((sum, item) => {
+      const product = sale.catalog?.find((entry) => entry.id === item.product_id);
+      const unit = product?.units?.find((entry) => entry.id === item.unit_id);
+      if (!product || !unit) return sum;
+      const price = product.product_type.toLowerCase() === "service"
+        ? Number(item.unit_price ?? unit.price)
+        : Number(unit.price);
+      return sum + price * item.quantity;
+    }, 0);
+  }
+
   function updatePendingAmountPaid(saleId: string, amount: number) {
     if (!Number.isFinite(amount) || amount < 0) return;
     setPendingSales((current) => current.map((sale) => sale.id !== saleId ? sale : {
@@ -834,6 +847,13 @@ export default function SalesPage() {
                     );
                   })}
                 </div>
+                {sale.status === "conflict" && sale.catalog && (
+                  <p className="mt-3 rounded-lg bg-orange-500/10 p-3 text-sm text-orange-100">
+                    Revised total at current prices: <strong>{money(pendingReviewTotal(sale) ?? sale.total)}</strong>
+                    {" · "}Amount paid: {money(sale.payload.amount_paid)}
+                    {" · "}Remaining: {money(Math.max(0, (pendingReviewTotal(sale) ?? sale.total) - sale.payload.amount_paid))}
+                  </p>
+                )}
                 {sale.status === "conflict" && sale.catalog && (
                   <label className="mt-3 block max-w-xs text-xs text-white/60">
                     Amount paid
