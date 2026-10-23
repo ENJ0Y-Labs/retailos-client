@@ -10,6 +10,7 @@ import { HelpMenu, TourPageButton } from "@/components/tour/HelpMenu";
 import { useOptionalTour } from "@/components/tour/TourProvider";
 import type { User } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -125,6 +126,7 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
             <span aria-hidden="true">☰</span>
           </button>
           <h1 className="min-w-0 flex-1 truncate text-xl font-semibold">{title}</h1>
+          <NotificationBell />
           <ThemeToggle compact />
           <TourPageButton />
           <HelpMenu />
