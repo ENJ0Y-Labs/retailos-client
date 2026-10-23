@@ -122,6 +122,7 @@ export default function TransactionsPage() {
     exportInProgress.current = true;
     const printWindow = format === "pdf" ? window.open("", "_blank") : null;
     if (format === "pdf" && !printWindow) {
+      exportInProgress.current = false;
       setError("The PDF window was blocked. Allow pop-ups for RetailOS and try again.");
       return;
     }
