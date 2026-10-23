@@ -151,3 +151,25 @@ export type DailyBrief = {
     } | null;
   };
 };
+
+export type DashboardRankings = {
+  period: {
+    start_date: string;
+    end_date: string;
+    timezone: string;
+  };
+  top_selling_products: Array<{
+    product_id: number;
+    product_name: string;
+    units_sold: number;
+    unit: string;
+  }>;
+  top_services: Array<{
+    service_id: number;
+    service_name: string;
+    completed_orders: number;
+  }>;
+  ranking_rules?: {
+    limit?: number;
+  };
+};
