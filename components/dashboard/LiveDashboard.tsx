@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
-import type { DailyBrief, DashboardStats, SaleSummary } from "@/lib/types";
+import type { DailyBrief, DashboardRankings, DashboardStats, SaleSummary } from "@/lib/types";
 import { formatNigeriaDate, formatNigeriaDateTime } from "@/lib/nigeria-time";
 
 export default function LiveDashboard() {
@@ -19,6 +19,12 @@ export default function LiveDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [periodStart, setPeriodStart] = useState(getTodayLagosDate);
+  const [periodEnd, setPeriodEnd] = useState(getTodayLagosDate);
+  const [rankings, setRankings] = useState<DashboardRankings | null>(null);
+  const [rankingsLoading, setRankingsLoading] = useState(true);
+  const [rankingsError, setRankingsError] = useState<string | null>(null);
+  const [rankingsRetryCount, setRankingsRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +57,80 @@ export default function LiveDashboard() {
     return () => { cancelled = true; };
   }, [storeId, retryCount]);
 
+  useEffect(() => {
+    if (!storeId) return;
+
+    let cancelled = false;
+
+    async function refreshBrief() {
+      try {
+        const params = new URLSearchParams({ store_id: String(storeId) });
+        const latest = await api<DailyBrief>(`/dashboard/daily-brief?${params.toString()}`, { refresh: true });
+        if (!cancelled) setBrief(latest);
+      } catch {
+        // Keep the last successful brief visible if a background refresh fails.
+      }
+    }
+
+    const handleInventoryChanged = () => { void refreshBrief(); };
+    const handleFocus = () => {
+      if (document.visibilityState === "visible") void refreshBrief();
+    };
+
+    window.addEventListener("retailos:inventory-changed", handleInventoryChanged);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("retailos:inventory-changed", handleInventoryChanged);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [storeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRankings() {
+      if (!storeId) {
+        setRankingsError("No store is associated with this account.");
+        setRankingsLoading(false);
+        return;
+      }
+      if (!periodStart || !periodEnd) return;
+      if (periodStart > periodEnd) {
+        setRankings(null);
+        setRankingsError("Start date must be on or before end date.");
+        setRankingsLoading(false);
+        return;
+      }
+
+      setRankingsLoading(true);
+      setRankingsError(null);
+      setRankings(null);
+
+      try {
+        const params = new URLSearchParams({
+          store_id: String(storeId),
+          start_date: periodStart,
+          end_date: periodEnd,
+        });
+        const result = await api<DashboardRankings>(`/dashboard/rankings?${params.toString()}`, { refresh: true });
+        if (cancelled) return;
+        setRankings(result);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setRankingsError(err instanceof Error ? err.message : "Unable to load dashboard rankings.");
+      } finally {
+        if (!cancelled) setRankingsLoading(false);
+      }
+    }
+
+    void loadRankings();
+    return () => { cancelled = true; };
+  }, [storeId, periodStart, periodEnd, rankingsRetryCount]);
+
   // The shell (sidebar, title, sign out) is always rendered so the layout never
   // jumps. Only the content area changes between loading, error, and loaded.
   return (
@@ -72,7 +152,7 @@ export default function LiveDashboard() {
       ) : !stats ? (
         <p className="text-sm text-white/60">Dashboard data is unavailable.</p>
       ) : (
-        <DashboardContent user={user?.username} stats={stats} brief={brief} sales={sales} />
+        <DashboardContent user={user?.username} stats={stats} brief={brief} sales={sales} rankings={rankings} rankingsLoading={rankingsLoading} rankingsError={rankingsError} periodStart={periodStart} periodEnd={periodEnd} onPeriodStartChange={setPeriodStart} onPeriodEndChange={setPeriodEnd} onRetryRankings={() => setRankingsRetryCount((count) => count + 1)} />
       )}
     </DashboardShell>
   );
@@ -83,12 +163,41 @@ function DashboardContent({
   stats,
   brief,
   sales,
+  rankings,
+  rankingsLoading,
+  rankingsError,
+  periodStart,
+  periodEnd,
+  onPeriodStartChange,
+  onPeriodEndChange,
+  onRetryRankings,
 }: {
   user?: string;
   stats: DashboardStats;
   brief: DailyBrief | null;
   sales: SaleSummary[];
+  rankings: DashboardRankings | null;
+  rankingsLoading: boolean;
+  rankingsError: string | null;
+  periodStart: string;
+  periodEnd: string;
+  onPeriodStartChange: (value: string) => void;
+  onPeriodEndChange: (value: string) => void;
+  onRetryRankings: () => void;
 }) {
+  const restockRecommendations = (brief?.insights?.restock_recommendations ?? []).filter((item) =>
+    Number.isSafeInteger(item.product_id) &&
+    item.product_id > 0 &&
+    typeof item.product_name === "string" &&
+    item.product_name.trim().length > 0 &&
+    Number.isFinite(item.stock_quantity) &&
+    item.stock_quantity >= 0 &&
+    item.low_stock_threshold !== null &&
+    Number.isFinite(item.low_stock_threshold) &&
+    item.low_stock_threshold >= 0 &&
+    item.stock_quantity <= item.low_stock_threshold
+  );
+
   return (
     <>
       <header><h2 className="text-lg font-semibold">Welcome{user ? `, ${user}` : ""}.</h2></header>
@@ -121,9 +230,19 @@ function DashboardContent({
             </div>
             <div>
               <h3 className="font-medium">Restock recommendations</h3>
-              {brief.insights.restock_recommendations.length ? (
-                <ul className="list-disc pl-5">{brief.insights.restock_recommendations.map((item) => <li key={item.product_id}>{item.product_name}: {item.stock_quantity} in stock (threshold {item.low_stock_threshold ?? "not set"})</li>)}</ul>
-              ) : <p>No products currently require restocking.</p>}
+              <p className="mb-2 text-xs text-white/45">Physical products only. Quantities and reorder thresholds use each product&apos;s configured base unit.</p>
+              {restockRecommendations.length ? (
+                <ul className="space-y-2">
+                  {restockRecommendations.map((item) => (
+                    <li key={item.product_id} className="rounded-lg bg-white/[0.03] p-3">
+                      <p className="font-medium">{item.product_name}</p>
+                      <p className="mt-1 text-xs text-white/60">
+                        {item.stock_quantity} in stock · Reorder threshold: {item.low_stock_threshold}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="rounded-lg bg-white/[0.03] p-3 text-sm text-white/60">No physical products currently meet a valid reorder threshold.</p>}
             </div>
             <div>
               <h3 className="font-medium">Top-selling product</h3>
@@ -138,6 +257,17 @@ function DashboardContent({
           </div>
         ) : <p className="mt-3 text-sm text-white/50">Today&apos;s business brief is not available.</p>}
       </section>
+
+      <DashboardRankingsSection
+        rankings={rankings}
+        loading={rankingsLoading}
+        error={rankingsError}
+        periodStart={periodStart}
+        periodEnd={periodEnd}
+        onPeriodStartChange={onPeriodStartChange}
+        onPeriodEndChange={onPeriodEndChange}
+        onRetry={onRetryRankings}
+      />
 
       <section aria-labelledby="recent-sales" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="recent-sales" className="font-semibold">Recent sales</h2>
@@ -169,6 +299,134 @@ function DashboardMetric({ label, value, href }: { label: string; value: string 
     <Link href={href} className="block rounded-xl bg-white/5 p-4 transition-colors hover:bg-white/10">
       {content}
     </Link>
+  );
+}
+
+function getTodayLagosDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function DashboardRankingsSection({
+  rankings,
+  loading,
+  error,
+  periodStart,
+  periodEnd,
+  onPeriodStartChange,
+  onPeriodEndChange,
+  onRetry,
+}: {
+  rankings: DashboardRankings | null;
+  loading: boolean;
+  error: string | null;
+  periodStart: string;
+  periodEnd: string;
+  onPeriodStartChange: (value: string) => void;
+  onPeriodEndChange: (value: string) => void;
+  onRetry: () => void;
+}) {
+  const reportedPeriod = rankings?.period;
+  const periodLabel = reportedPeriod
+    ? reportedPeriod.start_date === reportedPeriod.end_date
+      ? `${reportedPeriod.start_date} (${reportedPeriod.timezone})`
+      : `${reportedPeriod.start_date} to ${reportedPeriod.end_date} (${reportedPeriod.timezone})`
+    : "Selected date range";
+
+  return (
+    <section aria-labelledby="dashboard-rankings" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="dashboard-rankings" className="font-semibold">Product and service rankings</h2>
+          <p className="mt-1 text-xs text-white/45">Rankings use the server-reported Africa/Lagos reporting period.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-xs text-white/60">
+            Start date
+            <input aria-label="Ranking start date" type="date" value={periodStart} max={periodEnd || undefined} onChange={(event) => onPeriodStartChange(event.target.value)} className="mt-1 block rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white" />
+          </label>
+          <label className="text-xs text-white/60">
+            End date
+            <input aria-label="Ranking end date" type="date" value={periodEnd} min={periodStart || undefined} onChange={(event) => onPeriodEndChange(event.target.value)} className="mt-1 block rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white" />
+          </label>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-white/45">Reporting period: {periodLabel}</p>
+
+      {loading ? (
+        <div role="status" aria-live="polite" className="mt-4 space-y-3">
+          <span className="text-sm text-white/60">Loading product and service rankings…</span>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[0, 1].map((section) => <div key={section} className="rounded-xl bg-white/[0.03] p-4"><div className="h-4 w-36 animate-pulse rounded bg-white/10" /><div className="mt-4 h-8 animate-pulse rounded bg-white/5" /><div className="mt-2 h-8 animate-pulse rounded bg-white/5" /></div>)}
+          </div>
+        </div>
+      ) : error ? (
+        <div role="alert" className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+          <p className="text-sm text-red-300">Rankings could not be loaded: {error}</p>
+          <button type="button" onClick={onRetry} className="mt-3 rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black">Retry rankings</button>
+        </div>
+      ) : rankings ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <RankingList
+            title="Top-selling products"
+            description="Physical products ranked by net base units sold after recorded returns."
+            emptyMessage="No physical product units were sold in this reporting period."
+            rows={rankings.top_selling_products.map((item) => ({ id: item.product_id, name: item.product_name, measure: item.units_sold, unit: item.unit, measureLabel: "units sold" }))}
+          />
+          <RankingList
+            title="Top services"
+            description="Services ranked by distinct qualifying sales containing the service. Each sale counts once per service."
+            emptyMessage="No qualifying service orders were recorded in this reporting period."
+            rows={rankings.top_services.map((item) => ({ id: item.service_id, name: item.service_name, measure: item.completed_orders, unit: "orders", measureLabel: "service orders" }))}
+          />
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-white/60">Rankings are unavailable for this reporting period.</p>
+      )}
+    </section>
+  );
+}
+
+function RankingList({
+  title,
+  description,
+  emptyMessage,
+  rows,
+}: {
+  title: string;
+  description: string;
+  emptyMessage: string;
+  rows: Array<{ id: number; name: string; measure: number; unit: string; measureLabel: string }>;
+}) {
+  return (
+    <section aria-label={title} className="rounded-xl border border-white/10 bg-black/20 p-4">
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mt-1 text-xs leading-5 text-white/45">{description}</p>
+      {rows.length ? (
+        <ol className="mt-3 divide-y divide-white/5">
+          {rows.map((row, index) => (
+            <li key={row.id} className="flex items-center justify-between gap-4 py-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span aria-label={`Rank ${index + 1}`} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/5 text-xs text-white/55">{index + 1}</span>
+                <span className="min-w-0 break-words text-sm">{row.name}</span>
+              </div>
+              <span className="shrink-0 text-right">
+                <span className="block text-sm font-semibold tabular-nums">{row.measure.toLocaleString("en-NG")} {row.unit}</span>
+                <span className="block text-[11px] text-white/45">{row.measureLabel}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="mt-4 rounded-lg bg-white/[0.03] p-3 text-sm text-white/60">{emptyMessage}</p>
+      )}
+    </section>
   );
 }
 

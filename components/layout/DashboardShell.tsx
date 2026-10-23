@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { HelpMenu, TourPageButton } from "@/components/tour/HelpMenu";
 import { useOptionalTour } from "@/components/tour/TourProvider";
 import type { User } from "@/lib/types";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -27,9 +28,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Sales", href: "/sales" },
   { label: "Products & Inventory", href: "/inventory" },
   { label: "Transactions", href: "/transactions" },
+  { label: "Audit history", href: "/audit" },
   { label: "Customers", href: "/customers" },
   { label: "Who Owes Me", href: "/debts" },
   { label: "Alerts", href: "/alerts" },
+  { label: "Feedback", href: "/feedback" },
+  { label: "Plans & subscription", href: "/plans" },
   { label: "Settings", href: "/settings" },
 ];
 
@@ -121,6 +125,7 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
             <span aria-hidden="true">☰</span>
           </button>
           <h1 className="min-w-0 flex-1 truncate text-xl font-semibold">{title}</h1>
+          <ThemeToggle compact />
           <TourPageButton />
           <HelpMenu />
         </header>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { TourProvider } from "@/components/tour/TourProvider";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 const siteName = "TX RetailOS";
@@ -40,11 +41,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try { var savedTheme = localStorage.getItem("retailos:theme:v1"); if (savedTheme === "light" || savedTheme === "dark") { document.documentElement.dataset.theme = savedTheme; document.documentElement.style.colorScheme = savedTheme; } } catch (_) {}`,
+          }}
+        />
+      </head>
       <body>
-        <AuthProvider>
-          <TourProvider>{children}</TourProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <TourProvider>{children}</TourProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

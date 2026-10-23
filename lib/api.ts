@@ -65,9 +65,12 @@ export async function api<T = unknown>(path: string, init: ApiInit = {}): Promis
   if (!response.ok) {
     // Do not redirect failed login/registration or the session probe itself.
     // Any other 401 means a protected action has an expired/invalid session.
+    const isIncorrectCurrentPassword =
+      path === "/auth/change-password" && body?.error?.code === "AUTH_INVALID_CURRENT_PASSWORD";
     if (
       response.status === 401 &&
       typeof window !== "undefined" &&
+      !isIncorrectCurrentPassword &&
       !["/auth/login", "/auth/register", "/auth/me", "/auth/logout"].includes(path)
     ) {
       // This helper is a plain module, so the App Router router is not
@@ -82,6 +85,21 @@ export async function api<T = unknown>(path: string, init: ApiInit = {}): Promis
       response.status,
       body,
     );
+  }
+
+  // Mutations invalidate cached reads, including product prices, sale totals, and stock data.
+  if (!isGet) {
+    GET_CACHE.clear();
+
+    const mutationPath = path.split("?")[0];
+    const changesInventory =
+      /^\/product\/(create|update|delete|adjust|receivings)$/.test(mutationPath) ||
+      /^\/sales(?:\/.*)?$/.test(mutationPath) ||
+      /^\/refunds(?:\/.*)?$/.test(mutationPath);
+
+    if (changesInventory && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("retailos:inventory-changed"));
+    }
   }
 
   const result = (body?.data ?? body) as T;

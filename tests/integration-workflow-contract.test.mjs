@@ -36,7 +36,9 @@ test("checkout validates cart/payment, prevents concurrent submits, and preserve
   assert.match(sales, /amountPaid > total/);
   assert.match(sales, /balance > 0 && !customerId/);
   assert.match(sales, /client_transaction_id: saleTransactionId/);
-  assert.match(sales, /localStorage\.setItem\(\s*"retailos-pending-sale-id"/);
+  assert.match(sales, /localStorage\.setItem\(accountStorageKey, JSON\.stringify\(snapshot\)\)/);
+  assert.match(sales, /client_transaction_id: saleTransactionId/);
+  assert.match(sales, /Retry with same reference/);
   assert.match(sales, /product_id: item\.product\.id/);
   assert.match(sales, /unit_id: item\.unitId/);
   assert.match(sales, /quantity: item\.quantity/);

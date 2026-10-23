@@ -15,5 +15,6 @@ test("landing page communicates the product value and provides auth entry points
   assert.match(landingPage, /organize products, track stock, record sales/);
   assert.match(landingPage, /href="\/register"/);
   assert.match(landingPage, /href="\/login"/);
-  assert.match(landingPage, /Public plan prices are not published/);
+  assert.match(landingPage, /Subscription details and available plans are shown inside the authenticated application/);
+  assert.doesNotMatch(landingPage, /Public plan prices are not published/i);
 });

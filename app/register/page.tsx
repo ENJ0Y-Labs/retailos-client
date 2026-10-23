@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,7 +43,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0b0b0b] px-4 py-8 text-white">
+    <main className="relative flex min-h-screen items-center justify-center bg-[#0b0b0b] px-4 py-8 text-white">
+      <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
       <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#151515] p-8">
         <p className="mb-8 text-lg font-bold">TX <span className="text-orange-500">RetailOS</span></p>
         <h1 className="text-3xl font-semibold">Create account</h1>

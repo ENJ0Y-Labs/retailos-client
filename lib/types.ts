@@ -18,6 +18,13 @@ export type User = {
 
 export type ProductType = "Physical" | "Service";
 
+export type Category = {
+  id: number;
+  store_id: number;
+  name: string;
+  item_type: ProductType;
+};
+
 export type ProductUnit = {
   id: number;
   product_id: number;
@@ -31,6 +38,7 @@ export type Product = {
   store_id: number;
   name: string;
   product_type: ProductType;
+  category_id?: number | null;
   base_unit: string;
   price: string | number;
   stock_quantity: number;
@@ -141,5 +149,27 @@ export type DailyBrief = {
       yesterday_units_sold: number;
       today_units_sold: number;
     } | null;
+  };
+};
+
+export type DashboardRankings = {
+  period: {
+    start_date: string;
+    end_date: string;
+    timezone: string;
+  };
+  top_selling_products: Array<{
+    product_id: number;
+    product_name: string;
+    units_sold: number;
+    unit: string;
+  }>;
+  top_services: Array<{
+    service_id: number;
+    service_name: string;
+    completed_orders: number;
+  }>;
+  ranking_rules?: {
+    limit?: number;
   };
 };
