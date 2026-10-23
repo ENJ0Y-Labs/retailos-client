@@ -279,7 +279,6 @@ test("offline checkout persists account-scoped carts and restores pending sales"
 
 test("offline sale synchronization uses the server idempotency contract and separates confirmed sales", () => {
   const page = source("app/sales/page.tsx");
-  const serverReadme = "https://github.com/ENJ0Y-Labs/retailos-server/blob/main/README.md";
   assert.match(page, /api<\{[\s\S]*?sync_status\?: "accepted" \| "already_processed" \| "rejected"/);
   assert.match(page, /"\/sales\/sync"/);
   assert.match(page, /client_transaction_id: id/);
@@ -291,7 +290,6 @@ test("offline sale synchronization uses the server idempotency contract and sepa
   assert.match(page, /Pending sales \(/);
   assert.match(page, /separate from confirmed server sales/);
   assert.match(page, /window\.addEventListener\("beforeunload", warnBeforeUnload\)/);
-  assert.ok(serverReadme.includes("README.md"));
 });
 
 test("pending checkout data is gated by the signed-in account and store", () => {
