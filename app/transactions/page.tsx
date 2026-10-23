@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
@@ -10,12 +10,14 @@ import type { Category, Receipt } from "@/lib/types";
 type ExportSaleItem = {
   product_id?: number;
   product_name?: string;
+  category_id?: number | null;
   category_name?: string | null;
   quantity?: number | string;
   unit?: string | null;
   unit_name?: string | null;
   unit_conversion?: number | string | null;
   sale_price?: number | string;
+  unit_price?: number | string;
   price_at_sale?: number | string;
   line_total?: number | string;
   total?: number | string;
@@ -56,6 +58,7 @@ export default function TransactionsPage() {
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [exporting, setExporting] = useState<"pdf" | "csv" | null>(null);
+  const exportInProgress = useRef(false);
   const [page, setPage] = useState(1);
   const LIMIT = 20;
   const [rows, setRows] = useState<SaleRow[]>([]);
@@ -115,7 +118,8 @@ export default function TransactionsPage() {
   }, [rows, query]);
 
   async function exportTransactions(format: "pdf" | "csv") {
-    if (!storeId || exporting) return;
+    if (!storeId || exportInProgress.current) return;
+    exportInProgress.current = true;
     const printWindow = format === "pdf" ? window.open("", "_blank") : null;
     if (format === "pdf" && !printWindow) {
       setError("The PDF window was blocked. Allow pop-ups for RetailOS and try again.");
@@ -149,7 +153,7 @@ export default function TransactionsPage() {
         const lines = [["Sale ID","Transaction ID","Date","Customer ID","Payment Method","Product ID","Product","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
         for (const sale of rowsToExport) {
           for (const item of (sale.items?.length ? sale.items : [null])) {
-            lines.push([sale.id,sale.client_transaction_id,sale.created_at,sale.customer_id,sale.payment_method,item?.product_id,item?.product_name,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
+            lines.push([sale.id,sale.client_transaction_id,sale.created_at,sale.customer_id,sale.payment_method,item?.product_id,item?.product_name,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
           }
         }
         lines.push("");
@@ -172,7 +176,7 @@ export default function TransactionsPage() {
     } catch (cause) {
       printWindow?.close();
       setError(cause instanceof Error ? "Export failed: " + cause.message : "Export failed. Please try again.");
-    } finally { setExporting(null); }
+    } finally { exportInProgress.current = false; setExporting(null); }
   }
 
   async function showDetails(id: number) {
