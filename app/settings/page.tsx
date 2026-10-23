@@ -132,7 +132,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell title="Settings">
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="settings-account" className="rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-semibold">Account</h2>
@@ -159,7 +159,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="settings-store" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 className="font-semibold">Store profile</h2>
         <p className="mt-2 text-sm text-white/50">Update the name shown throughout RetailOS. Only the store owner can make this change.</p>
         <dl className="mt-4 space-y-2 text-sm">
@@ -205,7 +205,7 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <section className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="settings-password" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 className="font-semibold">Change password</h2>
         <p className="mt-2 text-sm text-white/50">Choose a new password for this account. After a successful change, all sessions are invalidated and you must sign in again.</p>
         <form onSubmit={handlePasswordChange} className="mt-5 max-w-xl space-y-4">
