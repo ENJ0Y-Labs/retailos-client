@@ -402,7 +402,7 @@ export default function TransactionsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="px-3 py-10 text-center text-white/40">Loading transactions…</td></tr>
+                <tr><td colSpan={8} className="px-3 py-10 text-center text-white/40">Loading transactions…</td></tr>
               ) : paginatedRows.map((sale) => (
                 <tr key={sale.id} className="border-t border-white/5">
                   <td className="px-3 py-4">{formatNigeriaDateTime(sale.created_at)}</td>
