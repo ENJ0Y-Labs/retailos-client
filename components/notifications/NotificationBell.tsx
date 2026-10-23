@@ -54,7 +54,9 @@ export default function NotificationBell() {
   }, [storeId]);
 
   useEffect(() => {
-    void loadAlerts();
+    // Defer the initial request until after the effect body to avoid a synchronous
+    // state update during effect execution under React's set-state-in-effect rule.
+    void Promise.resolve().then(() => loadAlerts());
 
     const refreshWhenVisible = () => {
       if (document.visibilityState === "visible") void loadAlerts(true);
