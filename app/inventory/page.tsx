@@ -8,6 +8,13 @@ import { api } from "@/lib/api";
 import type { Category, InventoryMovement, Product, ProductType } from "@/lib/types";
 import CsvImport from "@/components/inventory/CsvImport";
 
+function displayUnit(unit: string): string {
+  if (unit === "piece") return "Pieces";
+  if (unit === "kg") return "kg";
+  if (unit === "bag") return "Bags";
+  return unit;
+}
+
 export default function InventoryPage() {
   const { user } = useAuth();
   const storeId = user?.store_id ?? null;
@@ -29,6 +36,7 @@ export default function InventoryPage() {
     productType: "Physical" as ProductType,
     baseUnit: "piece",
   });
+  const [customUnit, setCustomUnit] = useState("");
   const isService = form.productType === "Service";
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -41,6 +49,8 @@ export default function InventoryPage() {
     ? products
     : products.filter((product) => String(product.category_id ?? "") === selectedCategoryId);
   const actionLock = useRef(false);
+  const standardUnits = [{ value: "piece", label: "Pieces" }, { value: "kg", label: "kg" }, { value: "bag", label: "Bags" }];
+  const usesCustomUnit = !standardUnits.some((unit) => unit.value === form.baseUnit);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +140,7 @@ export default function InventoryPage() {
       productType: "Physical",
       baseUnit: "piece",
     });
+    setCustomUnit("");
   }
 
   function changeProductType(productType: ProductType) {
@@ -153,8 +164,9 @@ export default function InventoryPage() {
       stock: String(product.stock_quantity),
       threshold: product.low_stock_threshold == null ? "" : String(product.low_stock_threshold),
       productType: product.product_type,
-      baseUnit: product.base_unit,
+      baseUnit: standardUnits.some((unit) => unit.value === product.base_unit) ? product.base_unit : "other",
     });
+    setCustomUnit(standardUnits.some((unit) => unit.value === product.base_unit) ? "" : product.base_unit);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -167,13 +179,16 @@ export default function InventoryPage() {
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
+      if (!isService && usesCustomUnit && !customUnit.trim()) {
+        throw new Error("Enter a custom unit name before saving.");
+      }
       const commonPayload = {
         store_id: id,
         name: form.name.trim(),
         price: Number(form.price),
         product_type: form.productType,
         // The current create API expects a base_unit; services use a neutral fallback.
-        base_unit: isService ? "piece" : form.baseUnit.trim(),
+        base_unit: isService ? "piece" : (usesCustomUnit ? customUnit.trim() : form.baseUnit.trim()),
       };
       if (editing) {
         await api("/product/update", {
@@ -259,14 +274,15 @@ export default function InventoryPage() {
       const source = receivingForm.source.trim();
       const reason = [
         "Stock received",
-        `Unit cost: ₦${unitCost.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per ${product.base_unit}`,
+        `Unit cost: ₦${unitCost.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per ${displayUnit(product.base_unit)}`,
+        `Unit: ${displayUnit(product.base_unit)}`,
         `Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         `Received on: ${receivingForm.receivedAt}`,
         source ? `Supplier/source: ${source}` : "",
       ].filter(Boolean).join(" | ");
       await api("/product/adjust", { method: "POST", json: { store_id: id, id: product.id, quantity_change: quantity, reason } });
       setReceivingForm({ productId: "", quantity: "", unitCost: "", receivedAt: new Date().toISOString().slice(0, 10), source: "" });
-      setMessage(`Received ${quantity} ${product.base_unit} of ${product.name}. Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
+      setMessage(`Received ${quantity} ${displayUnit(product.base_unit)} of ${product.name}. Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
       await Promise.all([loadProducts(), loadMovements()]);
     } catch (e) {
       setMessage("");
@@ -329,7 +345,20 @@ export default function InventoryPage() {
         <label className="block text-xs text-white/75">Price (₦)<input required min="0" step="0.01" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field mt-1 text-sm" placeholder="0.00" /></label>
         {!isService && <>
           <label className="block text-xs text-white/75">{editing ? "Stock quantity" : "Opening stock"}<input required min="0" type="number" step="1" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field mt-1 text-sm" placeholder="0" /></label>
-          <label className="block text-xs text-white/75">Base unit<input required minLength={1} maxLength={20} value={form.baseUnit} onChange={(e) => setForm({ ...form, baseUnit: e.target.value })} className="field mt-1 text-sm" placeholder="e.g. piece" /></label>
+          <label className="block text-xs text-white/75">Base unit<select required value={usesCustomUnit ? "other" : form.baseUnit} onChange={(e) => {
+            const value = e.target.value;
+            if (value === "other") {
+              setForm((current) => ({ ...current, baseUnit: "other" }));
+              setCustomUnit(usesCustomUnit ? customUnit : "");
+            } else {
+              setForm((current) => ({ ...current, baseUnit: value }));
+              setCustomUnit("");
+            }
+          }} className="field mt-1 text-sm">
+            {standardUnits.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}
+            <option value="other">Other</option>
+          </select></label>
+          {usesCustomUnit && <label className="block text-xs text-white/75">Custom unit<input required minLength={1} maxLength={20} value={customUnit} onChange={(e) => setCustomUnit(e.target.value)} className="field mt-1 text-sm" placeholder="Enter unit name" /></label>}
           <label className="block text-xs text-white/75">Low-stock threshold (optional)<input min="0" type="number" step="1" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} className="field mt-1 text-sm" placeholder="Alert me at or below…" /></label>
         </>}
         <div className="flex gap-2 md:col-span-4">
@@ -411,19 +440,19 @@ export default function InventoryPage() {
               <tr key={product.id} className="border-t border-white/5">
                 <td className="px-3 py-4">{product.name}</td>
                 <td className="px-3 py-4">{product.product_type}</td>
-                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : product.base_unit}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : displayUnit(product.base_unit)}</td>
                 <td className="px-3 py-4">
                   {product.product_type === "Service" ? <span className="text-white/30">Not applicable</span> : <div className="space-y-1">
                     {(product.units ?? []).map((unit) => (
                       <p key={unit.id} className="whitespace-nowrap text-xs text-white/60">
-                        {unit.name}: {unit.base_quantity} {product.base_unit} · ₦{Number(unit.price).toLocaleString("en-NG")}
+                        {unit.name}: {Number.isFinite(Number(unit.base_quantity)) && Number(unit.base_quantity) > 0 ? `${unit.base_quantity} ${displayUnit(product.base_unit)}` : "Conversion unavailable"} · ₦{Number(unit.price).toLocaleString("en-NG")}
                       </p>
                     ))}
                     {!product.units?.length && <span className="text-white/30">No units configured</span>}
                   </div>}
                 </td>
                 <td className="px-3 py-4">₦{Number(product.price).toLocaleString()}</td>
-                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : `${product.stock_quantity} ${product.base_unit}`}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : `${product.stock_quantity} ${displayUnit(product.base_unit)}`}</td>
                 <td className="px-3 py-4">{product.product_type === "Service" ? "—" : product.low_stock_threshold ?? "—"}</td>
                 <td className="px-3 py-4"><div className="flex flex-wrap gap-2">
                   <button disabled={pendingAction !== null} onClick={() => adjust(product, 1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-40">{pendingAction === "adjust-" + product.id ? "Updating..." : "+1"}</button>
@@ -450,7 +479,7 @@ export default function InventoryPage() {
       <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div><h2 className="font-semibold">Stock receiving history</h2><p className="mt-1 text-xs text-white/35">Previous receiving entries are shown from the server&apos;s inventory movement history.</p></div>
         <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-white/40"><tr><th className="px-3 py-3">RECORDED</th><th className="px-3 py-3">PRODUCT ID</th><th className="px-3 py-3">QUANTITY ADDED</th><th className="px-3 py-3">RECEIVING DETAILS</th></tr></thead><tbody>
-          {receivingMovements.map((movement) => <tr key={movement.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(movement.created_at)}</td><td className="px-3 py-3">#{movement.product_id}</td><td className="px-3 py-3">+{movement.quantity_change}</td><td className="px-3 py-3">{movement.reason}</td></tr>)}
+          {receivingMovements.map((movement) => <tr key={movement.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(movement.created_at)}</td><td className="px-3 py-3">#{movement.product_id}</td><td className="px-3 py-3">+{movement.quantity_change} {movement.reason?.match(/(?:^| \| )Unit: ([^|]+)/)?.[1]?.trim() ? displayUnit(movement.reason.match(/(?:^| \| )Unit: ([^|]+)/)?.[1]?.trim() ?? "") : "unit not recorded"}</td><td className="px-3 py-3">{movement.reason}</td></tr>)}
           {!receivingMovements.length && <tr><td colSpan={4} className="px-3 py-10 text-center text-white/30">No stock receiving records yet.</td></tr>}
         </tbody></table></div>
       </section>
