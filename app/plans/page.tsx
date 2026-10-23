@@ -316,7 +316,7 @@ export default function PlansPage() {
 
               <div className="grid gap-4 lg:grid-cols-2">
                 {plans.map((plan) => {
-                  const isCurrent = currentPlan?.id === plan.id;
+                  const isCurrent = currentPlan?.id === plan.id && !(plan.id === "pro" && subscription?.subscription_status === "trial");
                   const selectedPrice = plan.billing_options.find((option) => option.interval === (plan.id === "pro" ? billingInterval : "month")) ?? plan.price;
                   return (
                     <article key={plan.id} className={`rounded-2xl border p-5 sm:p-6 ${isCurrent ? "border-orange-500/70 bg-orange-500/5" : "border-white/10 bg-[#151515]"}`}>
