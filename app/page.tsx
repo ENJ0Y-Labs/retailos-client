@@ -121,16 +121,15 @@ export default function Home() {
 
       <section className="mx-auto grid max-w-7xl gap-8 px-6 py-16 sm:px-10 md:grid-cols-[1fr_auto] md:items-center md:py-20">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">Getting started</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight">Simple to begin. Clear about pricing.</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">Your workspace</p>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight">Set up your store, then manage your plan in RetailOS.</h2>
           <p className="mt-4 max-w-2xl leading-7 text-white/60">
-            Create an account to access RetailOS. Public plan prices are not published on this page yet; contact the Trexave team for current pricing before making a purchasing decision.
+            Subscription details and available plans are shown inside the authenticated application using the current server catalog.
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
           <Link href="/register" className="inline-flex justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400">Create your account</Link>
-          <Link href="/login" className="inline-flex justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">I already have an account</Link>
-          <Link href="mailto:support.trexave@gmail.com?subject=TX%20RetailOS%20Pricing%20Enquiry" className="inline-flex justify-center rounded-xl border border-orange-500/40 px-5 py-3 text-sm font-semibold text-orange-300 transition hover:border-orange-400 hover:bg-orange-500/10">Contact sales</Link>
+          <Link href="/login" className="inline-flex justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">Sign in</Link>
         </div>
       </section>
 

@@ -33,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Who Owes Me", href: "/debts" },
   { label: "Alerts", href: "/alerts" },
   { label: "Feedback", href: "/feedback" },
+  { label: "Plans & subscription", href: "/plans" },
   { label: "Settings", href: "/settings" },
 ];
 
