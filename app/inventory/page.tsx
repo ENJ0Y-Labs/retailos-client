@@ -366,7 +366,7 @@ export default function InventoryPage() {
           {editing && <button type="button" disabled={pendingAction !== null} onClick={reset} className="rounded-xl bg-white/10 px-4 py-3 text-sm disabled:opacity-50">Cancel</button>}
         </div>
       </form>
-      <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="inventory-receiving" className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="mb-4"><h2 className="font-semibold">Receive stock</h2><p className="mt-1 text-xs text-white/45">Record incoming stock and its cost. Quantity is entered in the product&apos;s configured base unit.</p></div>
         <form onSubmit={receiveStock} aria-label="Receive stock form" className="grid gap-3 md:grid-cols-3">
           <label className="block text-xs text-white/75">Product<select required value={receivingForm.productId} onChange={(e) => setReceivingForm({ ...receivingForm, productId: e.target.value })} className="field mt-1 text-sm"><option value="">Choose a product</option>{products.filter((product) => product.product_type === "Physical").map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></label>

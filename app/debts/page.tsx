@@ -255,7 +255,7 @@ export default function DebtsPage() {
         <p className="mt-2 text-2xl font-semibold text-orange-400">{money(totalOutstanding)}</p>
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="debts-sales-table" className="rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">Outstanding sales</h2>

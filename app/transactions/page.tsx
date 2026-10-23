@@ -323,7 +323,7 @@ export default function TransactionsPage() {
     <DashboardShell title="Transactions">
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-4 sm:p-5">
+      <section data-tour="transactions-search-panel" className="rounded-2xl border border-white/10 bg-[#151515] p-4 sm:p-5">
         <div data-tour="transactions-filters" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <input
             aria-label="Search transactions"
