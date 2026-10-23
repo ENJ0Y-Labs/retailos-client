@@ -58,6 +58,38 @@ export default function LiveDashboard() {
   }, [storeId, retryCount]);
 
   useEffect(() => {
+    if (!storeId) return;
+
+    let cancelled = false;
+
+    async function refreshBrief() {
+      try {
+        const params = new URLSearchParams({ store_id: String(storeId) });
+        const latest = await api<DailyBrief>(`/dashboard/daily-brief?${params.toString()}`, { refresh: true });
+        if (!cancelled) setBrief(latest);
+      } catch {
+        // Keep the last successful brief visible if a background refresh fails.
+      }
+    }
+
+    const handleInventoryChanged = () => { void refreshBrief(); };
+    const handleFocus = () => {
+      if (document.visibilityState === "visible") void refreshBrief();
+    };
+
+    window.addEventListener("retailos:inventory-changed", handleInventoryChanged);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("retailos:inventory-changed", handleInventoryChanged);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+    };
+  }, [storeId]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadRankings() {
@@ -153,6 +185,19 @@ function DashboardContent({
   onPeriodEndChange: (value: string) => void;
   onRetryRankings: () => void;
 }) {
+  const restockRecommendations = (brief?.insights?.restock_recommendations ?? []).filter((item) =>
+    Number.isSafeInteger(item.product_id) &&
+    item.product_id > 0 &&
+    typeof item.product_name === "string" &&
+    item.product_name.trim().length > 0 &&
+    Number.isFinite(item.stock_quantity) &&
+    item.stock_quantity >= 0 &&
+    item.low_stock_threshold !== null &&
+    Number.isFinite(item.low_stock_threshold) &&
+    item.low_stock_threshold >= 0 &&
+    item.stock_quantity <= item.low_stock_threshold
+  );
+
   return (
     <>
       <header><h2 className="text-lg font-semibold">Welcome{user ? `, ${user}` : ""}.</h2></header>
@@ -185,9 +230,19 @@ function DashboardContent({
             </div>
             <div>
               <h3 className="font-medium">Restock recommendations</h3>
-              {brief.insights.restock_recommendations.length ? (
-                <ul className="list-disc pl-5">{brief.insights.restock_recommendations.map((item) => <li key={item.product_id}>{item.product_name}: {item.stock_quantity} in stock (threshold {item.low_stock_threshold ?? "not set"})</li>)}</ul>
-              ) : <p>No products currently require restocking.</p>}
+              <p className="mb-2 text-xs text-white/45">Physical products only. Quantities and reorder thresholds use each product&apos;s configured base unit.</p>
+              {restockRecommendations.length ? (
+                <ul className="space-y-2">
+                  {restockRecommendations.map((item) => (
+                    <li key={item.product_id} className="rounded-lg bg-white/[0.03] p-3">
+                      <p className="font-medium">{item.product_name}</p>
+                      <p className="mt-1 text-xs text-white/60">
+                        {item.stock_quantity} in stock · Reorder threshold: {item.low_stock_threshold}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="rounded-lg bg-white/[0.03] p-3 text-sm text-white/60">No physical products currently meet a valid reorder threshold.</p>}
             </div>
             <div>
               <h3 className="font-medium">Top-selling product</h3>
