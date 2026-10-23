@@ -299,3 +299,29 @@ test("pending checkout data is gated by the signed-in account and store", () => 
   assert.match(page, /\{accountReady && pendingSales\.length > 0 &&/);
   assert.match(page, /Restoring checkout data for the signed-in account/);
 });
+
+
+test("checkout recovery classifies common failures and keeps ambiguous requests pending", () => {
+  const page = source("app/sales/page.tsx");
+  assert.match(page, /function checkoutFailureMessage\(cause: unknown\)/);
+  assert.match(page, /STALE_PRICE|PRICE_CHANGED|PRICE_MISMATCH/);
+  assert.match(page, /There is not enough stock/);
+  assert.match(page, /Checkout needs a correction/);
+  assert.match(page, /server error while processing checkout/);
+  assert.match(page, /kept pending with the same reference/);
+  assert.match(page, /savePendingSale\(salePayload, total, customerId[\s\S]*?checkoutFailureMessage\(e\)\)/);
+});
+
+test("checkout locks before asynchronous price verification and releases on early recovery paths", () => {
+  const page = source("app/sales/page.tsx");
+  assert.match(page, /checkoutLock\.current = true;\s*setSubmitting\(true\);\s*setError\(""\);\s*setMessage\(""\);\s*\n\s*if \(!navigator\.onLine\)/);
+  assert.match(page, /checkoutLock\.current = false;\s*setSubmitting\(false\);\s*return;/);
+  assert.match(page, /disabled=\{\s*loading\s*\|\|\s*submitting/);
+});
+
+test("definite checkout rejection preserves the cart and resets the key before corrected resubmission", () => {
+  const page = source("app/sales/page.tsx");
+  assert.match(page, /A definite rejection means this identifier can no longer be reused/);
+  assert.match(page, /setTransactionId\(""\);[\s\S]*?setError\(checkoutFailureMessage\(e\)\)/);
+  assert.match(page, /Your cart and entered checkout details have been kept/);
+});

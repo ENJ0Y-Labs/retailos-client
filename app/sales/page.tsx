@@ -59,6 +59,36 @@ type OfflineSnapshot = {
 
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
 
+function checkoutFailureMessage(cause: unknown): string {
+  if (!(cause instanceof ApiError)) {
+    return "The server could not be reached or the response was interrupted. Your sale details are saved as pending. Do not start a second sale; retry using the same reference.";
+  }
+
+  const code = (cause.code ?? "").toUpperCase();
+  if (/STALE_PRICE|PRICE_CHANGED|PRICE_MISMATCH/.test(code) || /price.*chang|chang.*price/i.test(cause.message)) {
+    return "A product price changed before checkout. No sale was confirmed. Review the updated price and total, then submit the corrected sale as a new attempt.";
+  }
+  if (/STOCK|INSUFFICIENT_QUANTITY|OUT_OF_STOCK/.test(code) || /stock.*(insufficient|available)|insufficient stock/i.test(cause.message)) {
+    return "There is not enough stock for one or more items. Your cart and entered checkout details are still here. Reduce the quantity or refresh stock before trying again.";
+  }
+  if (/VALIDATION|INVALID|REQUIRED|BAD_REQUEST/.test(code) || cause.status === 400 || cause.status === 422) {
+    return `Checkout needs a correction: ${cause.message}. Your cart and entered checkout details have been kept.`;
+  }
+  if (cause.status === 401 || cause.status === 403) {
+    return "Your session or store access could not be verified. Sign in again and check the sale before submitting. Your entered checkout details have been kept.";
+  }
+  if (code.includes("IDEMPOTENCY_KEY_REUSED")) {
+    return "This transaction reference is already associated with different sale details. Do not retry with a new reference blindly. Reconcile the original sale with the server first.";
+  }
+  if (cause.status === 409) {
+    return `The server rejected this checkout because the sale conflicts with current records: ${cause.message}. Review the details before trying again.`;
+  }
+  if (cause.status >= 500) {
+    return "RetailOS encountered a server error while processing checkout. The result may be uncertain, so the sale is kept pending with the same reference for safe recovery.";
+  }
+  return `Checkout could not be completed: ${cause.message}. Your entered details have been kept.`;
+}
+
 const money = (value: number) =>
   "₦" +
   value.toLocaleString("en-NG", {
@@ -253,7 +283,7 @@ export default function SalesPage() {
           : item));
       }
     } catch (cause) {
-      const messageText = cause instanceof Error ? cause.message : "Synchronization failed.";
+      const messageText = checkoutFailureMessage(cause);
       const permanent = cause instanceof ApiError && cause.status >= 400 && cause.status < 500;
       const code = cause instanceof ApiError ? cause.code : undefined;
       setPendingSales((current) => current.map((item) => item.id === sale.id
@@ -298,7 +328,7 @@ export default function SalesPage() {
     };
   }
 
-  function savePendingSale(payload: OfflineSalePayload, saleTotal: number, customerLabel: string): boolean {
+  function savePendingSale(payload: OfflineSalePayload, saleTotal: number, customerLabel: string, recoveryMessage?: string): boolean {
     if (!accountStorageKey || !accountReady || storageReadFailed) {
       setError("Checkout data is still being restored for this account. Wait a moment and try again.");
       return false;
@@ -311,7 +341,7 @@ export default function SalesPage() {
       payload,
       status: "pending",
       retryable: true,
-      message: "Saved on this device. This is not a confirmed sale yet.",
+      message: recoveryMessage ?? "Saved on this device. This is not a confirmed sale yet.",
     };
     const nextPending = [...pendingSales.filter((sale) => sale.id !== pending.id), pending];
     const snapshot: OfflineSnapshot = {
@@ -649,12 +679,19 @@ export default function SalesPage() {
       return;
     }
 
+    checkoutLock.current = true;
+    setSubmitting(true);
+    setError("");
+    setMessage("");
+
     if (!navigator.onLine) {
       const offlineId = transactionId || crypto.randomUUID();
       const payload = buildSalePayload(offlineId, true);
       savePendingSale(payload, total, customerId
         ? customers.find((customer) => String(customer.id) === customerId)?.name ?? `Customer #${customerId}`
         : "Walk-in");
+      checkoutLock.current = false;
+      setSubmitting(false);
       return;
     }
 
@@ -680,6 +717,8 @@ export default function SalesPage() {
       if (priceChanged) {
         setCart(refreshedCart);
         setMessage("Product prices or selling units changed while this cart was open. The cart has been refreshed and the total recalculated. Review the updated total before completing the sale.");
+        checkoutLock.current = false;
+        setSubmitting(false);
         return;
       }
       setCart(refreshedCart);
@@ -691,15 +730,12 @@ export default function SalesPage() {
           ? customers.find((customer) => String(customer.id) === customerId)?.name ?? `Customer #${customerId}`
           : "Walk-in");
       } else {
-        setError(e instanceof Error ? e.message : "Unable to verify current product prices. Refresh the products and try again.");
+        setError(`Could not verify current prices and stock. ${checkoutFailureMessage(e)}`);
       }
+      checkoutLock.current = false;
+      setSubmitting(false);
       return;
     }
-
-    checkoutLock.current = true;
-    setSubmitting(true);
-    setError("");
-    setMessage("");
 
     const saleTransactionId = transactionId || crypto.randomUUID();
     setTransactionId(saleTransactionId);
@@ -727,14 +763,13 @@ export default function SalesPage() {
       if (!(e instanceof ApiError) || e.status >= 500 || !navigator.onLine) {
         savePendingSale(salePayload, total, customerId
           ? customers.find((customer) => String(customer.id) === customerId)?.name ?? `Customer #${customerId}`
-          : "Walk-in");
+          : "Walk-in", checkoutFailureMessage(e));
       } else {
-        const failure = e.message || "Unable to complete sale.";
-        setError(
-          /price.*chang|chang.*price/i.test(failure)
-            ? "A product price changed before the sale could be completed. Review the current catalog and retry only after confirming the changed total."
-            : failure,
-        );
+        // A definite rejection means this identifier can no longer be reused
+        // for a corrected payload. Keep the cart and entered fields intact.
+        setTransactionId("");
+        setReceipt(null);
+        setError(checkoutFailureMessage(e));
       }
     } finally {
       checkoutLock.current = false;
@@ -1174,7 +1209,7 @@ export default function SalesPage() {
             data-tour="sales-complete"
             className="mt-4 w-full rounded-xl bg-orange-500 py-3 font-semibold text-black disabled:bg-white/10 disabled:text-white/30"
           >
-            {submitting ? "Processing..." : "Complete sale"}
+            {submitting ? "Processing checkout..." : "Complete sale"}
           </button>
         </aside>
       </div>}
