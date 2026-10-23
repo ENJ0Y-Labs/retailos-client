@@ -19,6 +19,7 @@ function isTheme(value: string | null): value is Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark");
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
@@ -26,10 +27,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (isTheme(savedTheme)) setTheme(savedTheme);
     } catch {
       // Storage may be disabled. The theme still works for this page session.
+    } finally {
+      setHydrated(true);
     }
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     try {
@@ -37,7 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       // Keep the in-memory preference if storage is unavailable.
     }
-  }, [theme]);
+  }, [hydrated, theme]);
 
   const toggleTheme = useCallback(() => {
     setTheme((current) => current === "dark" ? "light" : "dark");
