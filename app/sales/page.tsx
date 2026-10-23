@@ -879,7 +879,7 @@ export default function SalesPage() {
                         </div>
                         {sale.status === "conflict" && sale.catalog && (
                           <label className="text-xs text-white/60">Quantity
-                            <input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updatePendingQuantity(sale.id, item.product_id, item.unit_id, Number(event.target.value))} className="field ml-2 w-20" />
+                            <input type="number" inputMode="numeric" min="1" step="1" value={item.quantity} onChange={(event) => updatePendingQuantity(sale.id, item.product_id, item.unit_id, Number(event.target.value))} className="field ml-2 w-20" />
                           </label>
                         )}
                       </div>
@@ -896,7 +896,7 @@ export default function SalesPage() {
                 {sale.status === "conflict" && sale.catalog && (
                   <label className="mt-3 block max-w-xs text-xs text-white/60">
                     Amount paid
-                    <input type="number" min="0" step="0.01" value={sale.payload.amount_paid} onChange={(event) => updatePendingAmountPaid(sale.id, Number(event.target.value))} className="field mt-1 w-full" />
+                    <input type="number" inputMode="decimal" min="0" step="0.01" value={sale.payload.amount_paid} onChange={(event) => updatePendingAmountPaid(sale.id, Number(event.target.value))} className="field mt-1 w-full" />
                   </label>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1057,6 +1057,7 @@ export default function SalesPage() {
                       aria-label={`Quantity of ${item.product.name}`}
                       className="field w-20"
                       type="number"
+                      inputMode="numeric"
                       min="1"
                       step="1"
                       value={item.quantity}
@@ -1084,8 +1085,10 @@ export default function SalesPage() {
                   <label className="mt-3 block text-xs text-white/50">
                     Unit price
                     <input
+                      aria-label={`Unit price for ${item.product.name}`}
                       className="field mt-1 w-full"
                       type="number"
+                      inputMode="decimal"
                       min="0"
                       step="0.01"
                       value={item.price}
@@ -1127,6 +1130,7 @@ export default function SalesPage() {
             <input
               className="field mt-2 w-full"
               type="number"
+              inputMode="decimal"
               min="0"
               max={total}
               step="0.01"
