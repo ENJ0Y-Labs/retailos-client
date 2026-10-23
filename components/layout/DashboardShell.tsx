@@ -44,11 +44,23 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
   const pathname = usePathname();
   const storeName = user?.store_name ?? "Store";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // The tour points at the menu on phones, where it is a drawer: open it for that step.
   const tourNeedsMenu = tour?.state.status === "running" && tour.step?.target === "nav";
   const drawerOpen = menuOpen || tourNeedsMenu;
+
+  useEffect(() => {
+    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -131,6 +143,11 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
           <TourPageButton />
           <HelpMenu />
         </header>
+        {isOffline && (
+          <div role="status" aria-live="polite" className="border-b border-amber-400/40 bg-amber-950/70 px-4 py-3 text-sm text-amber-100 sm:px-8">
+            <strong className="font-semibold">You’re offline.</strong> RetailOS needs an internet connection to load or save store data. Reconnect before continuing; unsaved changes may be lost.
+          </div>
+        )}
         <main id="main-content" tabIndex={-1} className="px-4 py-6 outline-none sm:px-8">
           {children}
         </main>

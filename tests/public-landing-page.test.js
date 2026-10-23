@@ -32,3 +32,29 @@ test("public landing page displays server-backed Free and Pro pricing and limits
   assert.match(pricingSection, /role="status"/);
   assert.match(pricingSection, /role="alert"/);
 });
+
+
+test("landing page includes honest product previews, offline guidance, FAQs, and support links", () => {
+  assert.match(landingPage, /Product preview/);
+  assert.match(landingPage, /not screenshots of live store data/);
+  assert.match(landingPage, /Does RetailOS work offline\?/);
+  assert.match(landingPage, /needs an internet connection to load and save store data/i);
+  assert.match(landingPage, /Frequently asked questions/);
+  assert.match(landingPage, /github\.com\/ENJ0Y-Labs\/retailos-client\/issues/);
+});
+
+test("signed-in shell reports offline status without claiming offline-first support", async () => {
+  const shell = await readFile(new URL("../components/layout/DashboardShell.tsx", import.meta.url), "utf8");
+  assert.match(shell, /addEventListener\("offline"/);
+  assert.match(shell, /addEventListener\("online"/);
+  assert.match(shell, /role="status"/);
+  assert.match(shell, /unsaved changes may be lost/i);
+});
+
+test("tour onboarding explains that only user-performed actions can change data", async () => {
+  const welcome = await readFile(new URL("../components/tour/WelcomeDialog.tsx", import.meta.url), "utf8");
+  const helpMenu = await readFile(new URL("../components/tour/HelpMenu.tsx", import.meta.url), "utf8");
+  assert.match(welcome, /tour never clicks controls or submits forms/i);
+  assert.match(welcome, /that action may change your data/i);
+  assert.match(helpMenu, /Read FAQs and support options/);
+});
