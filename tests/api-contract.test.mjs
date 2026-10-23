@@ -163,3 +163,19 @@ test("products and services listing supports category tabs and restores selectio
   assert.match(page, /No products or services are assigned to this category/);
   assert.match(page, /product\.product_type === "Service"/);
 });
+
+
+test("inventory product form supports predefined and custom units without losing legacy values", () => {
+  const page = source("app/inventory/page.tsx");
+  assert.match(page, /value: "piece", label: "Pieces"/);
+  assert.match(page, /value: "kg", label: "kg"/);
+  assert.match(page, /value: "bag", label: "Bags"/);
+  assert.match(page, /<option value="other">Other<\/option>/);
+  assert.match(page, /Custom unit/);
+  assert.match(page, /customUnit\.trim\(\)/);
+  assert.match(page, /setCustomUnit\(standardUnits\.some\(\(unit\) => unit\.value === product\.base_unit\) \? "" : product\.base_unit\)/);
+  assert.match(page, /base_unit: isService \? "piece" : \(usesCustomUnit \? customUnit\.trim\(\) : form\.baseUnit\.trim\(\)\)/);
+  assert.match(page, /Unit: \$\{product\.base_unit\}/);
+  assert.match(page, /unit not recorded/);
+  assert.match(page, /Conversion unavailable/);
+});
