@@ -44,3 +44,10 @@ test("login explains that a successfully changed password requires a new sign-in
   assert.match(page, /Password changed successfully\. Sign in with your new password/);
   assert.match(page, /reason === "session-expired"/);
 });
+
+
+test("incorrect current password is shown in Settings instead of being treated as an expired session", () => {
+  const api = source("lib/api.ts");
+  assert.match(api, /path === "\/auth\/change-password" && body\?\.error\?\.code === "AUTH_INVALID_CURRENT_PASSWORD"/);
+  assert.match(api, /!isIncorrectCurrentPassword/);
+});
