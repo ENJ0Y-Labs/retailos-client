@@ -45,14 +45,14 @@ test("branding assets are registered and used across public and authenticated en
   const brand = await read("../components/brand/BrandMark.tsx");
   const css = await read("../app/globals.css");
 
-  assert.match(layout, /url: "\/favicon\\.ico"/);
-  assert.match(layout, /url: "\/icon\\.png"/);
-  assert.match(layout, /url: "\/apple-icon\\.png"/);
-  assert.match(layout, /url: "\/og-image\\.png"/);
-  assert.match(brand, /\/brand\/logo-light\\.svg/);
-  assert.match(brand, /\/brand\/logo-dark\\.svg/);
-  assert.match(css, /html\\[data-theme="light"\\] \\.brand-mark-dark/);
+  assert.ok(layout.includes('url: "/favicon.ico"'));
+  assert.ok(layout.includes('url: "/icon.png"'));
+  assert.ok(layout.includes('url: "/apple-icon.png"'));
+  assert.ok(layout.includes('url: "/og-image.png"'));
+  assert.ok(brand.includes('/brand/logo-light.svg'));
+  assert.ok(brand.includes('/brand/logo-dark.svg'));
+  assert.ok(css.includes('html[data-theme="light"] .brand-mark-dark'));
   for (const source of [landing, login, register, shell]) {
-    assert.match(source, /BrandMark/);
+    assert.ok(source.includes("BrandMark"));
   }
 });
