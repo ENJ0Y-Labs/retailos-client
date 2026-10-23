@@ -267,7 +267,7 @@ export default function DebtsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[680px] w-full text-left text-sm">
             <thead className="text-xs text-white/40">
               <tr>{["CUSTOMER", "SALE", "SALE DATE", "ORIGINAL TOTAL", "PAID", "REMAINING", "ACTION"].map((heading) =>
                 <th key={heading} className="px-3 py-3">{heading}</th>,
