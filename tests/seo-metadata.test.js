@@ -35,3 +35,24 @@ test("main application routes have distinct titles and are excluded from indexin
     assert.match(source, /index:\s*false/);
   }
 });
+
+test("branding assets are registered and used across public and authenticated entry points", async () => {
+  const layout = await read("../app/layout.tsx");
+  const landing = await read("../app/page.tsx");
+  const login = await read("../app/login/page.tsx");
+  const register = await read("../app/register/page.tsx");
+  const shell = await read("../components/layout/DashboardShell.tsx");
+  const brand = await read("../components/brand/BrandMark.tsx");
+  const css = await read("../app/globals.css");
+
+  assert.match(layout, /url: "\/favicon\\.ico"/);
+  assert.match(layout, /url: "\/icon\\.png"/);
+  assert.match(layout, /url: "\/apple-icon\\.png"/);
+  assert.match(layout, /url: "\/og-image\\.png"/);
+  assert.match(brand, /\/brand\/logo-light\\.svg/);
+  assert.match(brand, /\/brand\/logo-dark\\.svg/);
+  assert.match(css, /html\\[data-theme="light"\\] \\.brand-mark-dark/);
+  for (const source of [landing, login, register, shell]) {
+    assert.match(source, /BrandMark/);
+  }
+});
