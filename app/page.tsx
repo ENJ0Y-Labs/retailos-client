@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LandingPricingSection from "@/components/landing/PricingSection";
 
 const features = [
   {
@@ -119,19 +120,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-6 py-16 sm:px-10 md:grid-cols-[1fr_auto] md:items-center md:py-20">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">Your workspace</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight">Set up your store, then manage your plan in RetailOS.</h2>
-          <p className="mt-4 max-w-2xl leading-7 text-white/60">
-            Subscription details and available plans are shown inside the authenticated application using the current server catalog.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row md:flex-col">
-          <Link href="/register" className="inline-flex justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400">Create your account</Link>
-          <Link href="/login" className="inline-flex justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5">Sign in</Link>
-        </div>
-      </section>
+      <LandingPricingSection />
 
       <footer className="border-t border-white/10 px-6 py-6 sm:px-10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
