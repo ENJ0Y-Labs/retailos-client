@@ -142,7 +142,7 @@ export default function TransactionTrendsChart() {
         </div>
         <label className="shrink-0 text-xs text-white/60">
           Time range
-          <select aria-label="Transaction trends time range" value={range} onChange={(event) => setRange(event.target.value as "7" | "30" | "90")} className="mt-1 block w-full rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white">
+          <select aria-label="Transaction trends time range" value={range} onChange={(event) => { setRange(event.target.value as "7" | "30" | "90"); setSelectedIds(null); }} className="mt-1 block w-full rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white">
             {RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </label>
