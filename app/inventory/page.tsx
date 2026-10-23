@@ -425,7 +425,7 @@ export default function InventoryPage() {
           )}
         </div>
         <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="min-w-[880px] w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">TYPE</th><th className="px-3 py-3">BASE UNIT</th><th className="px-3 py-3">SELLING UNITS</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>
           <tbody>
             {productsLoading ? (

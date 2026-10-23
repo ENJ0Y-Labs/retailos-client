@@ -404,7 +404,7 @@ export default function TransactionsPage() {
         </div>
 
         <div data-tour="transactions-table" className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[760px] w-full text-left text-sm">
             <thead className="text-xs text-white/40">
               <tr>
                 {["DATE", "SALE", "CUSTOMER", "TOTAL", "PAYMENT", "PAID", "BALANCE", "DETAILS"].map((heading) =>
