@@ -103,7 +103,7 @@ export default function SalesPage() {
   const syncingIds = useRef(new Set<string>());
 
   const checkoutLock = useRef(false);
-  const accountReady = Boolean(accountStorageKey && hydratedKey === accountStorageKey);
+  const accountReady = Boolean(accountStorageKey && hydratedKey === accountStorageKey && !storageReadFailed);
 
   useEffect(() => {
     let cancelled = false;
@@ -855,7 +855,7 @@ export default function SalesPage() {
         </section>
       )}
 
-      {!accountReady && <p role="status" className="mb-5 text-sm text-white/50">Restoring checkout data for the signed-in account…</p>}
+      {!accountReady && <p role={storageReadFailed ? "alert" : "status"} className="mb-5 text-sm text-white/50">{storageReadFailed ? "Checkout is disabled because saved browser data could not be read. Do not clear browser storage; recover the saved data before continuing." : "Restoring checkout data for the signed-in account…"}</p>}
 
       {accountReady && <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
