@@ -18,6 +18,13 @@ export type User = {
 
 export type ProductType = "Physical" | "Service";
 
+export type Category = {
+  id: number;
+  store_id: number;
+  name: string;
+  item_type: ProductType;
+};
+
 export type ProductUnit = {
   id: number;
   product_id: number;
@@ -31,6 +38,7 @@ export type Product = {
   store_id: number;
   name: string;
   product_type: ProductType;
+  category_id?: number | null;
   base_unit: string;
   price: string | number;
   stock_quantity: number;
