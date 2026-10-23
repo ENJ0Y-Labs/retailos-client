@@ -27,7 +27,7 @@ test("public landing page displays server-backed Free and Pro pricing and limits
   assert.match(pricingSection, /Products/);
   assert.match(pricingSection, /Customers/);
   assert.match(pricingSection, /Sales per month/);
-  assert.match(pricingSection, /Staff accounts/);
+  assert.match(pricingSection, /Additional staff accounts/);
   assert.match(pricingSection, /paid billing is not yet configured/i);
   assert.match(pricingSection, /role="status"/);
   assert.match(pricingSection, /role="alert"/);
