@@ -9,13 +9,12 @@ type BrandMarkProps = {
 
 export default function BrandMark({ size = 48, className = "" }: BrandMarkProps) {
   return (
-    <span className={`brand-mark inline-flex shrink-0 items-center justify-center ${className}`} aria-hidden="true">
+    <span className={`brand-mark inline-flex shrink-0 items-center justify-center ${className}`} style={{ width: size, height: size }} aria-hidden="true">
       <Image
         src="/brand/logo-light.svg"
         alt=""
         width={size}
         height={size}
-        priority
         className="brand-mark-light h-full w-full object-contain"
       />
       <Image
