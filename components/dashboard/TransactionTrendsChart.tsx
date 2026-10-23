@@ -37,7 +37,7 @@ export default function TransactionTrendsChart() {
   const [range, setRange] = useState<"7" | "30" | "90">("7");
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<TrendSale[]>([]);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -121,11 +121,9 @@ export default function TransactionTrendsChart() {
     return { days, series };
   }, [products, sales, range, startDate]);
 
-  useEffect(() => {
-    setSelectedIds(chart.series.slice(0, 4).map((series) => series.id));
-  }, [chart.series]);
-
-  const visibleSeries = chart.series.filter((series) => selectedIds.includes(series.id));
+  const visibleSeries = selectedIds === null
+    ? chart.series.slice(0, 4)
+    : chart.series.filter((series) => selectedIds.includes(series.id));
   const maxValue = Math.max(1, ...visibleSeries.flatMap((series) => series.values));
   const plot = { left: 70, top: 18, width: 880, height: 230 };
   const x = (index: number) => plot.left + (chart.days.length <= 1 ? 0 : (index / (chart.days.length - 1)) * plot.width);
@@ -166,7 +164,7 @@ export default function TransactionTrendsChart() {
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
               {chart.series.map((series) => (
                 <label key={series.id} className="flex min-w-0 cursor-pointer items-center gap-2 text-xs text-white/75">
-                  <input type="checkbox" checked={selectedIds.includes(series.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, series.id] : current.filter((id) => id !== series.id))} className="accent-orange-400" />
+                  <input type="checkbox" checked={selectedIds === null ? chart.series.slice(0, 4).some((item) => item.id === series.id) : selectedIds.includes(series.id)} onChange={(event) => setSelectedIds((current) => { const selected = current ?? chart.series.slice(0, 4).map((item) => item.id); return event.target.checked ? [...new Set([...selected, series.id])] : selected.filter((id) => id !== series.id); })} className="accent-orange-400" />
                   <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: series.color }} />
                   <span className="max-w-44 break-words">{series.name}</span>
                   <span className="text-white/35">{series.type === "Service" ? "Service" : "Product"}</span>
