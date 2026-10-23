@@ -279,11 +279,11 @@ export default function SalesPage() {
       });
   }, [accountReady, isOnline, pendingSales, syncPendingSale]);
 
-  function buildSalePayload(id: string, includeExpectedPrice = false): OfflineSalePayload {
+  function buildSalePayload(saleTransactionId: string, includeExpectedPrice = false): OfflineSalePayload {
     return {
       store_id: Number(storeId),
       customer_id: customerId ? Number(customerId) : null,
-      client_transaction_id: id,
+      client_transaction_id: saleTransactionId,
       payment_method: paymentMethod === "CASH" ? "Cash" : paymentMethod === "TRANSFER" ? "Transfer" : "POS",
       amount_paid: amountPaid,
       items: cart.map((item) => ({
