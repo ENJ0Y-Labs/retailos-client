@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Sales", href: "/sales" },
   { label: "Products & Inventory", href: "/inventory" },
   { label: "Transactions", href: "/transactions" },
+  { label: "Audit history", href: "/audit" },
   { label: "Customers", href: "/customers" },
   { label: "Who Owes Me", href: "/debts" },
   { label: "Alerts", href: "/alerts" },
