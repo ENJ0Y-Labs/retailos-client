@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import BrandMark from "@/components/brand/BrandMark";
 import LandingPricingSection from "@/components/landing/PricingSection";
 
 const features = [
@@ -23,7 +25,8 @@ export default function Home() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#0b0b0b] text-white">
       <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 sm:px-10">
-        <Link href="/" className="text-xl font-bold tracking-tight" aria-label="TX RetailOS home">
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tight" aria-label="TX RetailOS home">
+          <BrandMark size={40} />
           TX <span className="text-orange-500">RetailOS</span>
         </Link>
         <nav aria-label="Main navigation" className="flex items-center gap-3">
