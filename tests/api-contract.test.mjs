@@ -109,10 +109,11 @@ test("debt payment history bypasses cached reads and explains a missing backend 
   assert.match(page, /max=\{paymentHistory\?\.balance \?\? selectedSale\.balance\}/);
 });
 
-test("settings page does not call unsupported store mutation routes", () => {
+test("settings page uses the documented store settings endpoint", () => {
   const page = source("app/settings/page.tsx");
   assert.match(page, /user\?\.store_name/);
-  assert.match(page, /editing has been disabled/i);
+  assert.match(page, /api<\{ store: \{ id: number; name: string \} \}>\("\/settings\/store"/);
+  assert.match(page, /method: "PATCH"/);
   assert.doesNotMatch(page, /\/api\/store/);
   assert.doesNotMatch(page, /fetch\(/);
 });
