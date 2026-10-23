@@ -12,13 +12,7 @@ export const metadata: Metadata = {
   title: "TX RetailOS | Retail and Stock Management",
   description,
   applicationName: siteName,
-  icons: {
-    icon: [
-      { url: "/favicon.ico", type: "image/x-icon" },
-      { url: "/icon.png", type: "image/png" },
-    ],
-    apple: [{ url: "/apple-icon.png", type: "image/png" }],
-  },
+  icons: ["/favicon.ico", "/icon.png", "/apple-icon.png"],
   alternates: {
     canonical: "/",
   },
