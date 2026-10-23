@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
 export type Theme = "light" | "dark";
@@ -12,39 +12,49 @@ type ThemeContextValue = {
 
 const STORAGE_KEY = "retailos:theme:v1";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
+const listeners = new Set<() => void>();
 
-function isTheme(value: string | null): value is Theme {
+function isTheme(value: string | null | undefined): value is Theme {
   return value === "light" || value === "dark";
 }
 
+function getSnapshot(): Theme {
+  if (typeof document === "undefined") return "dark";
+  const appliedTheme = document.documentElement.dataset.theme;
+  if (isTheme(appliedTheme)) return appliedTheme;
+  try {
+    const savedTheme = window.localStorage.getItem(STORAGE_KEY);
+    return isTheme(savedTheme) ? savedTheme : "dark";
+  } catch {
+    return "dark";
+  }
+}
+
+function getServerSnapshot(): Theme {
+  return "dark";
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function applyTheme(theme: Theme) {
+  document.documentElement.dataset.theme = theme;
+  document.documentElement.style.colorScheme = theme;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    // The theme still works for this page session when storage is unavailable.
+  }
+  listeners.forEach((listener) => listener());
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    try {
-      const savedTheme = window.localStorage.getItem(STORAGE_KEY);
-      if (isTheme(savedTheme)) setTheme(savedTheme);
-    } catch {
-      // Storage may be disabled. The theme still works for this page session.
-    } finally {
-      setHydrated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // Keep the in-memory preference if storage is unavailable.
-    }
-  }, [hydrated, theme]);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const toggleTheme = useCallback(() => {
-    setTheme((current) => current === "dark" ? "light" : "dark");
+    applyTheme(getSnapshot() === "dark" ? "light" : "dark");
   }, []);
 
   const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
