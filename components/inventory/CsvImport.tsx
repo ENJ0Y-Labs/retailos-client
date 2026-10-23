@@ -152,7 +152,7 @@ export default function CsvImport({
       </p>
 
       {error && <p role="alert" className="mt-4 whitespace-pre-line rounded-lg bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
-      {summary && <p role="status" className="mt-4 rounded-lg bg-green-500/10 p-3 text-sm text-green-300">{summary}</p>}
+      {summary && <p role="status" className={`mt-4 rounded-lg p-3 text-sm ${rowErrors.length ? "bg-amber-500/10 text-amber-300" : "bg-green-500/10 text-green-300"}`}>{summary}</p>}
       {rowErrors.length > 0 && (
         <div className="mt-4 rounded-lg border border-red-500/20 p-3">
           <h3 className="text-sm font-semibold">Rows rejected by the server</h3>
