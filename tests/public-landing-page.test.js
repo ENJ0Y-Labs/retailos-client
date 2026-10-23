@@ -22,7 +22,7 @@ test("landing page communicates the product value and provides auth entry points
 
 test("public landing page displays server-backed Free and Pro pricing and limits", () => {
   assert.match(pricingSection, /api<PlanCatalogResponse>\("\/subscriptions\/plans"\)/);
-  assert.match(pricingSection, /plan\.billing_options/);
+  assert.match(pricingSection, /proPlan\.billing_options/);
   assert.match(pricingSection, /Usage limits/);
   assert.match(pricingSection, /Products/);
   assert.match(pricingSection, /Customers/);
