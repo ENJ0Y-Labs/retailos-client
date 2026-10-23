@@ -117,10 +117,15 @@ export default function PlansPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.store_id]);
+  }, [user]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (!cancelled) await load();
+    })();
+    return () => { cancelled = true; };
   }, [load]);
 
   async function requestChange(plan: Plan) {
@@ -293,7 +298,7 @@ export default function PlansPage() {
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Available plans</h2>
-                  <p className="mt-1 text-sm text-white/55">Names, prices, limits, and entitlements come from the server's plan catalog.</p>
+                  <p className="mt-1 text-sm text-white/55">Names, prices, limits, and entitlements come from the server&apos;s plan catalog.</p>
                 </div>
                 {proPlan && (
                   <label className="text-sm text-white/70">
@@ -407,7 +412,7 @@ export default function PlansPage() {
                 </table>
               </div>
               <p className="mt-4 text-xs leading-5 text-white/45">
-                Plan metadata is not proof that every listed entitlement is enforced on every server route. Review the server's subscription launch-readiness notes before marketing Pro-only capabilities.
+                Plan metadata is not proof that every listed entitlement is enforced on every server route. Review the server&apos;s subscription launch-readiness notes before marketing Pro-only capabilities.
               </p>
             </section>
           </>
