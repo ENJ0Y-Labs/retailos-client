@@ -325,7 +325,7 @@ body {
 }
 
 @media (max-width: 360px) {
-  body > div > div > header > button[aria-label^="Switch to"] span:last-child {
+  body > div > div > header > button.header-theme-toggle span:last-child {
     display: none;
   }
 
