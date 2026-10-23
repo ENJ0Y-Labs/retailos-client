@@ -25,7 +25,7 @@ const LIMIT_LABELS: Record<string, string> = {
   products: "Products",
   customers: "Customers",
   sales_per_month: "Sales per month",
-  staff_accounts: "Staff accounts",
+  staff_accounts: "Additional staff accounts",
 };
 
 const FEATURE_ROWS: Array<{ label: string; group: "features" | "reporting"; key: string }> = [
