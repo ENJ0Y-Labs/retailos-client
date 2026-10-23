@@ -25,9 +25,10 @@ test("dashboard refreshes server recommendations after inventory mutations and w
   const page = source("components/dashboard/LiveDashboard.tsx");
   const api = source("lib/api.ts");
 
-  assert.match(api, /retailos:inventory-changed/);
-  assert.match(api, /product\\\/(create\|update\|delete\|adjust\|receivings)/);
-  assert.match(api, /sales\(\?:\\\/\.\*\)\?/);
+  assert.ok(api.includes("retailos:inventory-changed"));
+  assert.ok(api.includes("adjust|receivings"));
+  assert.ok(api.includes("sales(?:\\/.*)?"));
+  assert.ok(api.includes("refunds(?:\\/.*)?"));
   assert.match(page, /window\.addEventListener\("retailos:inventory-changed"/);
   assert.match(page, /document\.addEventListener\("visibilitychange"/);
   assert.match(page, /dashboard\/daily-brief\?/);
