@@ -5,7 +5,7 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import { formatNigeriaDateTime } from "@/lib/nigeria-time";
-import type { Category, Receipt } from "@/lib/types";
+import type { Category, Customer, Receipt } from "@/lib/types";
 
 type ExportSaleItem = {
   product_id?: number;
@@ -66,6 +66,7 @@ export default function TransactionsPage() {
   const [endDate, setEndDate] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [exporting, setExporting] = useState<"pdf" | "csv" | null>(null);
   const exportInProgress = useRef(false);
   const [page, setPage] = useState(1);
@@ -132,6 +133,20 @@ export default function TransactionsPage() {
       .catch(() => { if (!cancelled) setCategories([]); });
     return () => { cancelled = true; };
   }, [storeId]);
+
+  useEffect(() => {
+    if (!storeId) { setCustomers([]); return; }
+    let cancelled = false;
+    void api<{ customers: Customer[] }>(`/customers?store_id=${storeId}`, { refresh: true })
+      .then((data) => { if (!cancelled) setCustomers(Array.isArray(data.customers) ? data.customers : []); })
+      .catch(() => { if (!cancelled) setCustomers([]); });
+    return () => { cancelled = true; };
+  }, [storeId]);
+
+  const customerName = (customerId: number | null) => {
+    if (customerId == null) return "Walk-in";
+    return customers.find((customer) => customer.id === customerId)?.name ?? "Customer not found";
+  };
 
   const visibleRows = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -213,10 +228,10 @@ export default function TransactionsPage() {
       const totalBalance = rowsToExport.reduce((sum, sale) => sum + Number(sale.balance || 0), 0);
       const filename = "retailos-transactions-" + (startDate || "all") + "-to-" + (endDate || "today") + "-" + dateForFilename();
       if (format === "csv") {
-        const lines = [["Sale ID","Transaction ID","Date","Customer ID","Payment Method","Product ID","Product","Category ID","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
+        const lines = [["Sale ID","Transaction ID","Date","Customer","Payment Method","Product ID","Product","Category ID","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
         for (const sale of rowsToExport) {
           for (const item of (sale.items?.length ? sale.items : [null])) {
-            lines.push([sale.id,sale.client_transaction_id,sale.created_at,sale.customer_id,sale.payment_method,item?.product_id,item?.product_name,item?.category_id,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
+            lines.push([sale.id,sale.client_transaction_id,sale.created_at,customerName(sale.customer_id),sale.payment_method,item?.product_id,item?.product_name,item?.category_id,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
           }
         }
         lines.push("");
@@ -231,10 +246,10 @@ export default function TransactionsPage() {
       if (!printWindow) throw new Error("Unable to open PDF export window.");
       const tableRows = rowsToExport.map((sale) => {
         const items = (sale.items ?? []).map((item) => "<li>" + escapeHtml(item.product_name ?? ("Product #" + (item.product_id ?? ""))) + ": " + escapeHtml(item.quantity ?? "") + " " + escapeHtml(item.unit ?? item.unit_name ?? "") + " · " + escapeHtml(money(item.line_total ?? item.total ?? 0)) + "</li>").join("");
-        return "<tr><td>" + escapeHtml(formatNigeriaDateTime(sale.created_at)) + "<br><small>#" + sale.id + "</small></td><td>" + escapeHtml(sale.payment_method) + "</td><td>" + (items ? "<ul>" + items + "</ul>" : "Item details unavailable") + "</td><td>" + escapeHtml(money(sale.total_amount)) + "</td><td>" + escapeHtml(money(sale.amount_paid)) + "</td><td>" + escapeHtml(money(sale.balance)) + "</td></tr>";
+        return "<tr><td>" + escapeHtml(formatNigeriaDateTime(sale.created_at)) + "<br><small>#" + sale.id + "</small></td><td>" + escapeHtml(customerName(sale.customer_id)) + "</td><td>" + escapeHtml(sale.payment_method) + "</td><td>" + (items ? "<ul>" + items + "</ul>" : "Item details unavailable") + "</td><td>" + escapeHtml(money(sale.total_amount)) + "</td><td>" + escapeHtml(money(sale.amount_paid)) + "</td><td>" + escapeHtml(money(sale.balance)) + "</td></tr>";
       }).join("");
       const categoryName = categories.find((category) => String(category.id) === categoryId)?.name || "All categories";
-      printWindow.document.write("<!doctype html><html><head><meta charset='utf-8'><title>" + escapeHtml(filename) + "</title><style>body{font:12px Arial;color:#222;margin:28px}h1{font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top}th{background:#eee}ul{margin:0;padding-left:16px}@media print{tr{break-inside:avoid}}</style></head><body><h1>RetailOS Transactions</h1><p>Dates: " + escapeHtml(startDate || "All dates") + " to " + escapeHtml(endDate || "Today") + " · Category: " + escapeHtml(categoryName) + " · Payment: " + escapeHtml(paymentMethod || "All methods") + "</p><p>Transactions: " + rowsToExport.length + " · Total sales: " + escapeHtml(money(totalSales)) + " · Paid: " + escapeHtml(money(totalPaid)) + " · Balance: " + escapeHtml(money(totalBalance)) + "</p><table><thead><tr><th>Date / Sale</th><th>Payment</th><th>Items</th><th>Total</th><th>Paid</th><th>Balance</th></tr></thead><tbody>" + (tableRows || "<tr><td colspan='6'>No transactions match these filters.</td></tr>") + "</tbody></table><script>window.addEventListener('load',()=>window.print());</script></body></html>");
+      printWindow.document.write("<!doctype html><html><head><meta charset='utf-8'><title>" + escapeHtml(filename) + "</title><style>body{font:12px Arial;color:#222;margin:28px}h1{font-size:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top}th{background:#eee}ul{margin:0;padding-left:16px}@media print{tr{break-inside:avoid}}</style></head><body><h1>RetailOS Transactions</h1><p>Dates: " + escapeHtml(startDate || "All dates") + " to " + escapeHtml(endDate || "Today") + " · Category: " + escapeHtml(categoryName) + " · Payment: " + escapeHtml(paymentMethod || "All methods") + "</p><p>Transactions: " + rowsToExport.length + " · Total sales: " + escapeHtml(money(totalSales)) + " · Paid: " + escapeHtml(money(totalPaid)) + " · Balance: " + escapeHtml(money(totalBalance)) + "</p><table><thead><tr><th>Date / Sale</th><th>Customer</th><th>Payment</th><th>Items</th><th>Total</th><th>Paid</th><th>Balance</th></tr></thead><tbody>" + (tableRows || "<tr><td colspan='7'>No transactions match these filters.</td></tr>") + "</tbody></table><script>window.addEventListener('load',()=>window.print());</script></body></html>");
       printWindow.document.close(); printWindow.focus();
     } catch (cause) {
       printWindow?.close();
@@ -380,7 +395,7 @@ export default function TransactionsPage() {
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-white/40">
               <tr>
-                {["DATE", "SALE", "TOTAL", "PAYMENT", "PAID", "BALANCE", "DETAILS"].map((heading) =>
+                {["DATE", "SALE", "CUSTOMER", "TOTAL", "PAYMENT", "PAID", "BALANCE", "DETAILS"].map((heading) =>
                   <th key={heading} className="px-3 py-3">{heading}</th>,
                 )}
               </tr>
@@ -395,6 +410,7 @@ export default function TransactionsPage() {
                     <strong>#{sale.id}</strong>
                     {sale.client_transaction_id && <p className="mt-1 text-xs text-white/40">{sale.client_transaction_id}</p>}
                   </td>
+                  <td className="px-3 py-4">{customerName(sale.customer_id)}</td>
                   <td className="px-3 py-4">{money(sale.total_amount)}</td>
                   <td className="px-3 py-4">{sale.payment_method}</td>
                   <td className="px-3 py-4">{money(sale.amount_paid)}</td>
