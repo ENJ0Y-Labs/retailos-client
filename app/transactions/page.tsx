@@ -245,6 +245,7 @@ export default function TransactionsPage() {
   async function showDetails(id: number) {
     if (!storeId) return;
     setDetailsLoading(true);
+    setSelectedReceipt(null);
     setError("");
     try {
       const params = new URLSearchParams({ id: String(id), store_id: String(storeId) });
@@ -399,7 +400,7 @@ export default function TransactionsPage() {
                   <td className="px-3 py-4">{money(sale.amount_paid)}</td>
                   <td className="px-3 py-4">{money(sale.balance)}</td>
                   <td className="px-3 py-4">
-                    <button type="button" onClick={() => { setSelectedSale(sale); setRefundError(""); setRefundSuccessMessage(""); void showDetails(sale.id); }} className="rounded bg-white/10 px-3 py-2 text-xs">
+                    <button type="button" onClick={() => { setSelectedSale(sale); setRefundError(""); setRefundSuccessMessage(""); setRefundReceipt(null); setShowRefundForm(false); void showDetails(sale.id); }} className="rounded bg-white/10 px-3 py-2 text-xs">
                       View receipt
                     </button>
                   </td>
