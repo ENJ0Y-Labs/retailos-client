@@ -329,6 +329,7 @@ export default function DebtsPage() {
               <input
                 aria-label="Amount received"
                 type="number"
+                inputMode="decimal"
                 min="0.01"
                 max={paymentHistory?.balance ?? selectedSale.balance}
                 step="0.01"
