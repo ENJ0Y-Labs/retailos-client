@@ -170,7 +170,9 @@ export default function SalesPage() {
       const snapshot: OfflineSnapshot = { cart, customerId, paid, paymentMethod, transactionId, pendingSales };
       localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
     } catch {
-      setStorageWarning("Browser storage is unavailable or full. Checkout data may be lost on refresh. Do not queue an offline sale until storage works again.");
+      void Promise.resolve().then(() => {
+        setStorageWarning("Browser storage is unavailable or full. Checkout data may be lost on refresh. Do not queue an offline sale until storage works again.");
+      });
     }
   }, [accountStorageKey, hydratedKey, storageReadFailed, cart, customerId, paid, paymentMethod, transactionId, pendingSales]);
 
