@@ -11,6 +11,7 @@ import { useOptionalTour } from "@/components/tour/TourProvider";
 import type { User } from "@/lib/types";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import BrandMark from "@/components/brand/BrandMark";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -100,7 +101,10 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
         }`}
       >
         <div className="mb-6">
-          <p className="mb-2 text-xs uppercase tracking-widest text-white/65">TX RetailOS</p>
+          <Link href="/dashboard" className="mb-4 flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400">
+            <BrandMark size={42} className="shrink-0" />
+            <span className="text-base font-bold tracking-tight">TX <span className="text-orange-400">RetailOS</span></span>
+          </Link>
           <p className="truncate text-sm font-medium" title={storeName}>{storeName}</p>
         </div>
         <ul className="flex-1 space-y-1 overflow-y-auto">
