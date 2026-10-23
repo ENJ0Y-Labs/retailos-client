@@ -27,6 +27,19 @@ textarea {
   font: inherit;
 }
 
+/* Comfortable touch targets for shop-floor use on phones and tablets. */
+button,
+[role="button"] {
+  min-height: 44px;
+}
+
+.field,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  min-height: 44px;
+}
+
 button:not(:disabled),
 a {
   cursor: pointer;
