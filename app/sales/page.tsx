@@ -172,7 +172,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (!accountReady) return;
-    const hasUnsyncedData = cart.length > 0 || pendingSales.some((sale) => sale.status !== "conflict" || sale.retryable);
+    const hasUnsyncedData = cart.length > 0 || pendingSales.length > 0;
     if (!hasUnsyncedData) return;
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -657,7 +657,15 @@ export default function SalesPage() {
       }
       setCart(refreshedCart);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to verify current product prices. Refresh the products and try again.");
+      if (!(e instanceof ApiError) || e.status >= 500 || !navigator.onLine) {
+        const offlineId = transactionId || crypto.randomUUID();
+        const payload = buildSalePayload(offlineId, true);
+        savePendingSale(payload, total, customerId
+          ? customers.find((customer) => String(customer.id) === customerId)?.name ?? `Customer #${customerId}`
+          : "Walk-in");
+      } else {
+        setError(e instanceof Error ? e.message : "Unable to verify current product prices. Refresh the products and try again.");
+      }
       return;
     }
 
