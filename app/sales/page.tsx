@@ -106,11 +106,15 @@ export default function SalesPage() {
   const accountReady = Boolean(accountStorageKey && hydratedKey === accountStorageKey);
 
   useEffect(() => {
+    let cancelled = false;
     const updateOnlineStatus = () => setIsOnline(navigator.onLine);
-    updateOnlineStatus();
+    void Promise.resolve().then(() => {
+      if (!cancelled) updateOnlineStatus();
+    });
     window.addEventListener("online", updateOnlineStatus);
     window.addEventListener("offline", updateOnlineStatus);
     return () => {
+      cancelled = true;
       window.removeEventListener("online", updateOnlineStatus);
       window.removeEventListener("offline", updateOnlineStatus);
     };
