@@ -89,7 +89,13 @@ export default function AuditHistoryPage() {
   }, [storeId, startDate, endDate, actionType, userId]);
 
   useEffect(() => {
-    void loadLogs();
+    // Defer the initial/filter-triggered request so state updates happen outside
+    // the synchronous effect body (React's set-state-in-effect rule).
+    const timeoutId = window.setTimeout(() => {
+      void loadLogs();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadLogs]);
 
   const activeFilters = useMemo(() => [
