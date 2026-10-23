@@ -222,7 +222,7 @@ function DashboardContent({
   onPeriodEndChange: (value: string) => void;
   onRetryRankings: () => void;
 }) {
-  const firstDay = !salesError && sales.length === 0 && stats.products_count === 0;
+  const firstDay = !salesError && sales.length === 0 && stats.products_count === 0 && Number(stats.today_sales_count) === 0 && Number(stats.today_sales_total) === 0;
   const salesMetricValue = firstDay ? "No sales yet" : stats.today_sales_count;
   const salesTotalMetricValue = firstDay ? "No sales yet" : "₦" + Number(stats.today_sales_total).toLocaleString("en-NG");
 
