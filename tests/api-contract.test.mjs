@@ -19,6 +19,24 @@ test("transactions use the supported store-scoped sales contract", () => {
   assert.doesNotMatch(page, /status=|params\.set\(["']search["']/);
 });
 
+test("transactions combine filters, show active criteria and refresh matching totals", () => {
+  const page = source("app/transactions/page.tsx");
+  assert.match(page, /type="date" value=\{startDate\}/);
+  assert.match(page, /type="date" value=\{endDate\}/);
+  assert.match(page, /params\.set\("start_date", startDate\)/);
+  assert.match(page, /params\.set\("end_date", endDate\)/);
+  assert.match(page, /params\.set\("category_id", categoryId\)/);
+  assert.match(page, /params\.set\("payment_method", paymentMethod\)/);
+  assert.match(page, /Start date must be on or before end date/);
+  assert.match(page, /Active filters:/);
+  assert.match(page, /Clear Filters/);
+  assert.match(page, /filteredTotals\.sales/);
+  assert.match(page, /filteredTotals\.paid/);
+  assert.match(page, /filteredTotals\.balance/);
+  assert.match(page, /const paginatedRows = visibleRows\.slice/);
+  assert.doesNotMatch(page, /params\.set\("page", String\(page\)\)/);
+});
+
 test("transaction details use the supported sale lookup route and store ID", () => {
   const page = source("app/transactions/page.tsx");
   assert.match(page, /\/sales\/get\?/);
