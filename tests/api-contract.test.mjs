@@ -175,7 +175,7 @@ test("inventory product form supports predefined and custom units without losing
   assert.match(page, /customUnit\.trim\(\)/);
   assert.match(page, /setCustomUnit\(standardUnits\.some\(\(unit\) => unit\.value === product\.base_unit\) \? "" : product\.base_unit\)/);
   assert.match(page, /base_unit: isService \? "piece" : \(usesCustomUnit \? customUnit\.trim\(\) : form\.baseUnit\.trim\(\)\)/);
-  assert.match(page, /Unit: \$\{product\.base_unit\}/);
+  assert.match(page, /Unit: \$\{displayUnit\(product\.base_unit\)\}/);
   assert.match(page, /unit not recorded/);
   assert.match(page, /Conversion unavailable/);
 });
