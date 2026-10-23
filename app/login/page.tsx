@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
@@ -11,13 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [reason] = useState(() => {
-    if (typeof window !== "undefined") return new URLSearchParams(window.location.search).get("reason") || "";
-    return "";
-  });
-  const [error, setError] = useState(() => reason === "session-expired"
-    ? "Your session expired. Sign in again to continue."
-    : "");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const currentReason = new URLSearchParams(window.location.search).get("reason") || "";
+    setReason(currentReason);
+    if (currentReason === "session-expired") {
+      setError("Your session expired. Sign in again to continue.");
+    }
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
