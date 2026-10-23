@@ -214,3 +214,26 @@ test("transactions page supports filtered PDF and CSV exports with duplicate-act
   assert.match(page, /text\/csv/);
   assert.match(page, /Export failed:/);
 });
+
+test("transaction refund workflow uses the authoritative server contract and receipt", () => {
+  const page = source("app/transactions/page.tsx");
+  assert.match(page, /\/sales\/refunds/);
+  assert.match(page, /method: "POST"/);
+  assert.match(page, /client_transaction_id: refundRequestRef\.current/);
+  assert.match(page, /amount: amount\.toFixed\(2\)/);
+  assert.match(page, /reason: refundReason\.trim\(\)/);
+  assert.match(page, /payment_method: refundPaymentMethod/);
+  assert.match(page, /window\.confirm\(/);
+  assert.match(page, /disabled=\{refundSubmitting/);
+  assert.match(page, /REFUND_EXCEEDS_REMAINING_AMOUNT|remaining refundable amount/);
+  assert.match(page, /data\.refund\.receipt/);
+  assert.match(page, /refundReceipt\.refund_reference/);
+  assert.match(page, /refundReceipt\.original_sale_id/);
+  assert.match(page, /refundReceipt\.amount/);
+  assert.match(page, /refundReceipt\.created_at/);
+  assert.match(page, /refundReceipt\.payment_method/);
+  assert.match(page, /filteredTotals\.refunded/);
+  assert.match(page, /filteredTotals\.net/);
+  assert.match(page, /printRefundReceipt/);
+  assert.match(page, /await load\(\); await showDetails\(selectedSale\.id\)/);
+});
