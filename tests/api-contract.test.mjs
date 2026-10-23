@@ -281,7 +281,7 @@ test("offline sale synchronization uses the server idempotency contract and sepa
   const page = source("app/sales/page.tsx");
   assert.match(page, /api<\{[\s\S]*?sync_status\?: "accepted" \| "already_processed" \| "rejected"/);
   assert.match(page, /"\/sales\/sync"/);
-  assert.match(page, /client_transaction_id: id/);
+  assert.match(page, /client_transaction_id: saleTransactionId/);
   assert.match(page, /result\.sync_status === "accepted" \|\| result\.sync_status === "already_processed"/);
   assert.match(page, /Retry with same reference/);
   assert.match(page, /IDEMPOTENCY_KEY_REUSED/);
