@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardShell from "@/components/layout/DashboardShell";
+import TransactionTrendsChart from "@/components/dashboard/TransactionTrendsChart";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
 import type { DailyBrief, DashboardRankings, DashboardStats, SaleSummary } from "@/lib/types";
@@ -335,6 +336,8 @@ function DashboardContent({
           </div>
         )}
       </section>
+
+      <TransactionTrendsChart />
 
       <DashboardRankingsSection
         rankings={rankings}
