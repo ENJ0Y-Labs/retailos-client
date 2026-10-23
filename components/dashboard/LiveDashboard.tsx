@@ -378,7 +378,7 @@ function DashboardContent({
         onRetry={onRetryRankings}
       />
 
-      <section aria-labelledby="recent-sales" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section aria-labelledby="recent-sales" data-tour="dashboard-recent-sales" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 id="recent-sales" className="font-semibold">Recent sales</h2>
         <p className="mt-1 text-xs text-white/45">Timestamps are displayed in Africa/Lagos time (WAT, UTC+01:00).</p>
         {salesError ? (
@@ -455,7 +455,7 @@ function DashboardRankingsSection({
     : "Selected date range";
 
   return (
-    <section aria-labelledby="dashboard-rankings" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
+    <section aria-labelledby="dashboard-rankings" data-tour="dashboard-rankings" className="mt-5 rounded-2xl border border-white/10 bg-[#151515] p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="dashboard-rankings" className="font-semibold">Product and service rankings</h2>
