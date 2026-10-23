@@ -373,6 +373,25 @@ body {
 }
 
 
+/* Use the logo variant with enough contrast for the active theme. */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand-mark-light {
+  display: block;
+}
+.brand-mark-dark {
+  display: none;
+}
+html[data-theme="light"] .brand-mark-light {
+  display: none;
+}
+html[data-theme="light"] .brand-mark-dark {
+  display: block;
+}
+
 /* C9: keep wide operational tables readable on phones without widening the page. */
 #main-content .overflow-x-auto {
   width: 100%;
