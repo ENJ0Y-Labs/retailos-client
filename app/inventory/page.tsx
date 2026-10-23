@@ -5,13 +5,18 @@ import { formatNigeriaDateTime } from "@/lib/nigeria-time";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
-import type { InventoryMovement, Product, ProductType } from "@/lib/types";
+import type { Category, InventoryMovement, Product, ProductType } from "@/lib/types";
 import CsvImport from "@/components/inventory/CsvImport";
 
 export default function InventoryPage() {
   const { user } = useAuth();
   const storeId = user?.store_id ?? null;
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoryError, setCategoryError] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [editing, setEditing] = useState<number | null>(null);
   const [movementProduct, setMovementProduct] = useState<number | null>(null);
@@ -31,16 +36,55 @@ export default function InventoryPage() {
   const receivingProduct = products.find((product) => String(product.id) === receivingForm.productId);
   const receivingTotal = Number(receivingForm.quantity) * Number(receivingForm.unitCost);
   const receivingMovements = movements.filter((movement) => (movement.reason ?? "").startsWith("Stock received"));
+  const filteredProducts = selectedCategoryId === "all"
+    ? products
+    : products.filter((product) => String(product.category_id ?? "") === selectedCategoryId);
   const actionLock = useRef(false);
 
   useEffect(() => {
+    let active = true;
+
+    async function loadCategories() {
+      setCategoriesLoading(true);
+      setCategoryError("");
+      try {
+        if (!storeId) throw new Error("No store is associated with this account");
+        const data = await api<{ categories: Category[] }>("/categories?store_id=" + storeId, { refresh: true });
+        if (!active) return;
+        setCategories(data.categories);
+        const saved = window.sessionStorage.getItem("retailos:inventory:selected-category:" + storeId);
+        setSelectedCategoryId(
+          saved === "all" || data.categories.some((category) => String(category.id) === saved)
+            ? saved
+            : "all",
+        );
+      } catch (e) {
+        if (!active) return;
+        setCategories([]);
+        setSelectedCategoryId("all");
+        setCategoryError(e instanceof Error ? e.message : "Unable to load categories");
+      } finally {
+        if (active) setCategoriesLoading(false);
+      }
+    }
+
+    void loadCategories();
+    return () => {
+      active = false;
+    };
+  }, [storeId]);
+
+  useEffect(() => {
     async function load() {
+      setProductsLoading(true);
       try {
         if (!storeId) throw new Error("No store is associated with this account");
         const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
         setProducts(data.products);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to load inventory");
+      } finally {
+        setProductsLoading(false);
       }
     }
 
@@ -165,6 +209,7 @@ export default function InventoryPage() {
   }
 
   async function loadProducts() {
+    setProductsLoading(true);
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
@@ -172,6 +217,15 @@ export default function InventoryPage() {
       setProducts(data.products);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load inventory");
+    } finally {
+      setProductsLoading(false);
+    }
+  }
+
+  function selectCategory(categoryId: string) {
+    setSelectedCategoryId(categoryId);
+    if (storeId) {
+      window.sessionStorage.setItem("retailos:inventory:selected-category:" + storeId, categoryId);
     }
   }
 
@@ -290,11 +344,57 @@ export default function InventoryPage() {
         </form>
       </section>
       <div data-tour="inventory-import"><CsvImport storeId={storeId} onImported={loadProducts} /></div>
-      <section data-tour="inventory-table" className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-[#151515] p-5">
+      <section data-tour="inventory-table" className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-4 sm:p-5">
+        <div className="mb-4">
+          <div role="tablist" aria-label="Filter inventory by category" className="flex max-w-full gap-2 overflow-x-auto pb-2">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedCategoryId === "all"}
+              onClick={() => selectCategory("all")}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${selectedCategoryId === "all" ? "bg-orange-500 text-black" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            >
+              All
+            </button>
+            {categories.map((category) => {
+              const duplicateName = categories.some(
+                (other) => other.id !== category.id && other.name.toLocaleLowerCase() === category.name.toLocaleLowerCase(),
+              );
+              const label = duplicateName
+                ? category.name + (category.item_type === "Physical" ? " · Products" : " · Services")
+                : category.name;
+              const selected = selectedCategoryId === String(category.id);
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => selectCategory(String(category.id))}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${selected ? "bg-orange-500 text-black" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {categoriesLoading && <p role="status" className="mt-2 text-xs text-white/50">Loading categories…</p>}
+          {!categoriesLoading && categoryError && (
+            <p role="alert" className="mt-2 text-xs text-red-300">
+              Categories could not be loaded: {categoryError}. The All tab remains available.
+            </p>
+          )}
+          {!categoriesLoading && !categoryError && categories.length === 0 && (
+            <p className="mt-2 text-xs text-white/45">No categories yet. Items without a category remain available under All.</p>
+          )}
+        </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs text-white/40"><tr><th className="px-3 py-3">NAME</th><th className="px-3 py-3">TYPE</th><th className="px-3 py-3">BASE UNIT</th><th className="px-3 py-3">SELLING UNITS</th><th className="px-3 py-3">PRICE</th><th className="px-3 py-3">STOCK</th><th className="px-3 py-3">THRESHOLD</th><th className="px-3 py-3">ACTIONS</th></tr></thead>
           <tbody>
-            {products.map((product) => (
+            {productsLoading ? (
+              <tr><td colSpan={8} className="px-3 py-10 text-center text-white/50">Loading inventory…</td></tr>
+            ) : filteredProducts.map((product) => (
               <tr key={product.id} className="border-t border-white/5">
                 <td className="px-3 py-4">{product.name}</td>
                 <td className="px-3 py-4">{product.product_type}</td>
@@ -321,9 +421,18 @@ export default function InventoryPage() {
                 </div></td>
               </tr>
             ))}
-            {!products.length && <tr><td colSpan={8} className="px-3 py-10 text-center text-white/70">No products yet. Fill in the form above and press “Add product”, or import a CSV file.</td></tr>}
+            {!productsLoading && filteredProducts.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-3 py-10 text-center text-white/70">
+                  {selectedCategoryId === "all"
+                    ? "No products or services yet. Fill in the form above or import a CSV file."
+                    : "No products or services are assigned to this category yet."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+        </div>
       </section>
       <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div><h2 className="font-semibold">Stock receiving history</h2><p className="mt-1 text-xs text-white/35">Previous receiving entries are shown from the server&apos;s inventory movement history.</p></div>
