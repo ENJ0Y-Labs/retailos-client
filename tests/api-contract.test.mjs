@@ -11,7 +11,7 @@ test("transactions use the supported store-scoped sales contract", () => {
   const page = source("app/transactions/page.tsx");
   assert.match(page, /new URLSearchParams\(\{ store_id: String\(storeId\) \}\)/);
   assert.match(page, /params\.set\("payment_method", paymentMethod\)/);
-  assert.match(page, /api<\{ sales: SaleRow\[\] \}>/);
+  assert.match(page, /api<SalesListResponse>/);
   assert.match(page, /sale\.total_amount/);
   assert.match(page, /sale\.payment_method/);
   assert.match(page, /sale\.client_transaction_id/);
@@ -178,4 +178,21 @@ test("inventory product form supports predefined and custom units without losing
   assert.match(page, /Unit: \$\{displayUnit\(product\.base_unit\)\}/);
   assert.match(page, /unit not recorded/);
   assert.match(page, /Conversion unavailable/);
+});
+
+
+test("transactions page supports filtered PDF and CSV exports with duplicate-action protection", () => {
+  const page = source("app/transactions/page.tsx");
+  assert.match(page, /params\.set\("start_date", startDate\)/);
+  assert.match(page, /params\.set\("end_date", endDate\)/);
+  assert.match(page, /params\.set\("category_id", categoryId\)/);
+  assert.match(page, /params\.set\("payment_method", paymentMethod\)/);
+  assert.match(page, /Export PDF/);
+  assert.match(page, /Export CSV/);
+  assert.match(page, /exporting !== null/);
+  assert.match(page, /while \(true\)/);
+  assert.match(page, /retailos-transactions-/);
+  assert.match(page, /window\.print\(\)/);
+  assert.match(page, /text\/csv/);
+  assert.match(page, /Export failed:/);
 });
