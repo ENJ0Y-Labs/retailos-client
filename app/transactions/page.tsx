@@ -323,8 +323,8 @@ export default function TransactionsPage() {
     <DashboardShell title="Transactions">
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
 
-      <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
-        <div data-tour="transactions-filters" className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <section className="rounded-2xl border border-white/10 bg-[#151515] p-4 sm:p-5">
+        <div data-tour="transactions-filters" className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <input
             aria-label="Search transactions"
             value={query}
@@ -506,7 +506,7 @@ export default function TransactionsPage() {
           <p className="mt-1 text-sm text-white/50">Original transaction: {selectedSale.client_transaction_id || ("Sale #" + selectedSale.id)} · {formatNigeriaDateTime(selectedSale.created_at)} · {selectedSale.payment_method}</p>
           <div className="mt-3 rounded-lg bg-black/20 p-3 text-sm"><p>Original sale total: {money(selectedReceipt.total_amount)}</p><p>Amount paid: {money(selectedReceipt.amount_paid)}</p><p>Outstanding balance: {money(selectedReceipt.balance)}</p><p>Previously refunded: {money(selectedSale.refunded_amount || 0)}</p><p className="font-semibold">Remaining refundable: {money(remainingRefundable)}</p></div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm text-white/60">Refund amount (₦)<input aria-label="Refund amount" type="number" min="0.01" max={remainingRefundable} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="field" disabled={refundSubmitting} /></label>
+            <label className="flex flex-col gap-1 text-sm text-white/60">Refund amount (₦)<input aria-label="Refund amount" type="number" inputMode="decimal" min="0.01" max={remainingRefundable} step="0.01" value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="field" disabled={refundSubmitting} /></label>
             <label className="flex flex-col gap-1 text-sm text-white/60">Refund payment method<select aria-label="Refund payment method" value={refundPaymentMethod} onChange={(event) => setRefundPaymentMethod(event.target.value as "Cash" | "Transfer" | "POS")} className="field" disabled={refundSubmitting}><option value="Cash">Cash</option><option value="Transfer">Transfer</option><option value="POS">POS</option></select></label>
             <label className="flex flex-col gap-1 text-sm text-white/60 md:col-span-2">Reason for refund<textarea aria-label="Reason for refund" value={refundReason} maxLength={500} onChange={(event) => setRefundReason(event.target.value)} className="field min-h-24" placeholder="Explain why this refund is being issued" disabled={refundSubmitting} /></label>
           </div>
