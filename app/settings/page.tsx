@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -31,10 +31,6 @@ export default function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const passwordSubmitLock = useRef(false);
-
-  useEffect(() => {
-    setStoreName(user?.store_name ?? "");
-  }, [user?.store_name]);
 
   async function handleSignOut() {
     if (signingOut) return;
