@@ -151,10 +151,10 @@ export default function TransactionsPage() {
       const totalBalance = rowsToExport.reduce((sum, sale) => sum + Number(sale.balance || 0), 0);
       const filename = "retailos-transactions-" + (startDate || "all") + "-to-" + (endDate || "today") + "-" + dateForFilename();
       if (format === "csv") {
-        const lines = [["Sale ID","Transaction ID","Date","Customer ID","Payment Method","Product ID","Product","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
+        const lines = [["Sale ID","Transaction ID","Date","Customer ID","Payment Method","Product ID","Product","Category ID","Category","Quantity","Unit","Unit Conversion","Unit Price","Line Total","Transaction Total","Amount Paid","Balance","Refunded Amount","Net Amount"].map(csvCell).join(",")];
         for (const sale of rowsToExport) {
           for (const item of (sale.items?.length ? sale.items : [null])) {
-            lines.push([sale.id,sale.client_transaction_id,sale.created_at,sale.customer_id,sale.payment_method,item?.product_id,item?.product_name,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
+            lines.push([sale.id,sale.client_transaction_id,sale.created_at,sale.customer_id,sale.payment_method,item?.product_id,item?.product_name,item?.category_id,item?.category_name,item?.quantity,item?.unit ?? item?.unit_name,item?.unit_conversion,item?.sale_price ?? item?.unit_price ?? item?.price_at_sale,item?.line_total ?? item?.total,sale.total_amount,sale.amount_paid,sale.balance,sale.refunded_amount ?? 0,sale.net_amount ?? sale.total_amount].map(csvCell).join(","));
           }
         }
         lines.push("");
