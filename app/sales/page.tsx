@@ -274,7 +274,9 @@ export default function SalesPage() {
     if (!accountReady || !isOnline) return;
     pendingSales
       .filter((sale) => sale.status === "pending")
-      .forEach((sale) => void syncPendingSale(sale));
+      .forEach((sale) => {
+        void Promise.resolve().then(() => syncPendingSale(sale));
+      });
   }, [accountReady, isOnline, pendingSales, syncPendingSale]);
 
   function buildSalePayload(id: string, includeExpectedPrice = false): OfflineSalePayload {
