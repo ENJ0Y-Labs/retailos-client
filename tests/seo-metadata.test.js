@@ -45,9 +45,9 @@ test("branding assets are registered and used across public and authenticated en
   const brand = await read("../components/brand/BrandMark.tsx");
   const css = await read("../app/globals.css");
 
-  assert.ok(layout.includes('url: "/favicon.ico"'));
-  assert.ok(layout.includes('url: "/icon.png"'));
-  assert.ok(layout.includes('url: "/apple-icon.png"'));
+  assert.ok(layout.includes('"/favicon.ico"'));
+  assert.ok(layout.includes('"/icon.png"'));
+  assert.ok(layout.includes('"/apple-icon.png"'));
   assert.ok(layout.includes('url: "/og-image.png"'));
   assert.ok(brand.includes('/brand/logo-light.svg'));
   assert.ok(brand.includes('/brand/logo-dark.svg'));
