@@ -13,6 +13,7 @@ export default function InventoryPage() {
   const storeId = user?.store_id ?? null;
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  const [productsLoadError, setProductsLoadError] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [categoryError, setCategoryError] = useState("");
@@ -77,12 +78,15 @@ export default function InventoryPage() {
   useEffect(() => {
     async function load() {
       setProductsLoading(true);
+      setProductsLoadError("");
       try {
         if (!storeId) throw new Error("No store is associated with this account");
         const data = await api<{ products: Product[] }>("/product/list?store_id=" + storeId);
         setProducts(data.products);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Unable to load inventory");
+        const message = e instanceof Error ? e.message : "Unable to load inventory";
+        setProductsLoadError(message);
+        setError(message);
       } finally {
         setProductsLoading(false);
       }
@@ -210,13 +214,16 @@ export default function InventoryPage() {
 
   async function loadProducts() {
     setProductsLoading(true);
+    setProductsLoadError("");
     try {
       const id = storeId;
       if (!id) throw new Error("No store is associated with this account");
       const data = await api<{ products: Product[] }>("/product/list?store_id=" + id, { refresh: true });
       setProducts(data.products);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load inventory");
+      const message = e instanceof Error ? e.message : "Unable to load inventory";
+      setProductsLoadError(message);
+      setError(message);
     } finally {
       setProductsLoading(false);
     }
@@ -394,6 +401,12 @@ export default function InventoryPage() {
           <tbody>
             {productsLoading ? (
               <tr><td colSpan={8} className="px-3 py-10 text-center text-white/50">Loading inventory…</td></tr>
+            ) : productsLoadError ? (
+              <tr>
+                <td colSpan={8} className="px-3 py-10 text-center text-red-300">
+                  Inventory could not be loaded. <button type="button" onClick={() => void loadProducts()} className="ml-1 underline underline-offset-2">Retry</button>
+                </td>
+              </tr>
             ) : filteredProducts.map((product) => (
               <tr key={product.id} className="border-t border-white/5">
                 <td className="px-3 py-4">{product.name}</td>
@@ -421,7 +434,7 @@ export default function InventoryPage() {
                 </div></td>
               </tr>
             ))}
-            {!productsLoading && filteredProducts.length === 0 && (
+            {!productsLoading && !productsLoadError && filteredProducts.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-10 text-center text-white/70">
                   {selectedCategoryId === "all"
