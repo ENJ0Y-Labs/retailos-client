@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Customers", href: "/customers" },
   { label: "Who Owes Me", href: "/debts" },
   { label: "Alerts", href: "/alerts" },
+  { label: "Feedback", href: "/feedback" },
   { label: "Settings", href: "/settings" },
 ];
 
