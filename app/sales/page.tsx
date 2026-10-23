@@ -419,14 +419,18 @@ export default function SalesPage() {
       const unitPrice = product.product_type.toLowerCase() === "service" ? Number(item.unit_price ?? unit.price) : Number(unit.price);
       return sum + unitPrice * item.quantity;
     }, 0);
-    if (sale.payload.amount_paid > revisedTotal) {
-      setError("The previous amount paid is greater than the revised total. Resolve the payment amount manually before retrying.");
+    const revisedAmountPaid = sale.payload.amount_paid >= sale.total
+      ? revisedTotal
+      : sale.payload.amount_paid;
+    if (revisedAmountPaid > revisedTotal) {
+      setError("The previous amount paid is greater than the revised total. Adjust the amount paid before retrying.");
       return;
     }
     const newId = crypto.randomUUID();
     const revisedPayload: OfflineSalePayload = {
       ...sale.payload,
       client_transaction_id: newId,
+      amount_paid: revisedAmountPaid,
       items: revisedItems,
     };
     const revised: PendingSale = {
