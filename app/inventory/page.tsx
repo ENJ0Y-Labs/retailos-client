@@ -54,7 +54,7 @@ export default function InventoryPage() {
         setCategories(data.categories);
         const saved = window.sessionStorage.getItem("retailos:inventory:selected-category:" + storeId);
         setSelectedCategoryId(
-          saved === "all" || data.categories.some((category) => String(category.id) === saved)
+          saved && (saved === "all" || data.categories.some((category) => String(category.id) === saved))
             ? saved
             : "all",
         );
