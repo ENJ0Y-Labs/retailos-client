@@ -150,3 +150,16 @@ test("inventory category tabs filter by saved category without mutating products
   assert.match(page, /No products or services are assigned to this category yet/);
   assert.doesNotMatch(page, /selectCategory[\s\S]{0,250}api\(/);
 });
+
+test("products and services listing supports category tabs and restores selection", () => {
+  const page = source("app/items/page.tsx");
+  assert.match(page, /\/categories\?store_id=/);
+  assert.match(page, /role="tablist"/);
+  assert.match(page, /aria-selected=\{selectedCategoryId === "all"\}/);
+  assert.match(page, /selectedCategoryId === "all" \|\| String\(product\.category_id/);
+  assert.match(page, /retailos:items:selected-category:/);
+  assert.match(page, /Loading categories/);
+  assert.match(page, /Categories could not be loaded/);
+  assert.match(page, /No products or services are assigned to this category/);
+  assert.match(page, /product\.product_type === "Service"/);
+});
