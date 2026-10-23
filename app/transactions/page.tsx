@@ -99,7 +99,7 @@ export default function TransactionsPage() {
   }, [load]);
 
   useEffect(() => {
-    if (!storeId) { setCategories([]); return; }
+    if (!storeId) return;
     let cancelled = false;
     const params = new URLSearchParams({ store_id: String(storeId) });
     void api<{ categories: Category[] }>(`/categories?${params.toString()}`, { refresh: true })
