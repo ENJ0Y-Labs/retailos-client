@@ -207,7 +207,7 @@ export default function TransactionsPage() {
   }
 
   async function exportTransactions(format: "pdf" | "csv") {
-    if (!storeId || exportInProgress.current) return;
+    if (!storeId || loading || visibleRows.length === 0 || exportInProgress.current) return;
     exportInProgress.current = true;
     const printWindow = format === "pdf" ? window.open("", "_blank") : null;
     if (format === "pdf" && !printWindow) {
@@ -394,10 +394,10 @@ export default function TransactionsPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void exportTransactions("pdf")} disabled={exporting !== null || loading} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">
+          <button type="button" onClick={() => void exportTransactions("pdf")} disabled={exporting !== null || loading || visibleRows.length === 0} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">
             {exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}
           </button>
-          <button type="button" onClick={() => void exportTransactions("csv")} disabled={exporting !== null || loading} className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50">
+          <button type="button" onClick={() => void exportTransactions("csv")} disabled={exporting !== null || loading || visibleRows.length === 0} className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50">
             {exporting === "csv" ? "Preparing CSV…" : "Export CSV"}
           </button>
           {exporting && <span role="status" className="text-xs text-white/50">Loading all matching transactions…</span>}
