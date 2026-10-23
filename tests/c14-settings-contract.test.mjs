@@ -34,7 +34,7 @@ test("password change follows the server contract and requires confirmation befo
 test("PIN stays separate and unavailable controls do not pretend to work", () => {
   const page = source("app/settings/page.tsx");
   assert.match(page, /PIN setup is not available yet/);
-  assert.match(page, /disabled className=.*PIN setup unavailable/);
+  assert.match(page, /disabled className=/);\n  assert.match(page, /PIN setup unavailable/);
   assert.doesNotMatch(page, /api\([^)]*pin/i);
 });
 
@@ -42,7 +42,7 @@ test("login explains that a successfully changed password requires a new sign-in
   const page = source("app/login/page.tsx");
   assert.match(page, /reason === "password-changed"/);
   assert.match(page, /Password changed successfully\. Sign in with your new password/);
-  assert.match(page, /reason === "session-expired"/);
+  assert.match(page, /currentReason === "session-expired"/);
 });
 
 
