@@ -67,6 +67,7 @@ export default function TransactionsPage() {
   const [categoryId, setCategoryId] = useState("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customersStoreId, setCustomersStoreId] = useState<number | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "csv" | null>(null);
   const exportInProgress = useRef(false);
   const [page, setPage] = useState(1);
@@ -135,16 +136,27 @@ export default function TransactionsPage() {
   }, [storeId]);
 
   useEffect(() => {
-    if (!storeId) { setCustomers([]); return; }
+    if (!storeId) return;
     let cancelled = false;
     void api<{ customers: Customer[] }>(`/customers?store_id=${storeId}`, { refresh: true })
-      .then((data) => { if (!cancelled) setCustomers(Array.isArray(data.customers) ? data.customers : []); })
-      .catch(() => { if (!cancelled) setCustomers([]); });
+      .then((data) => {
+        if (!cancelled) {
+          setCustomers(Array.isArray(data.customers) ? data.customers : []);
+          setCustomersStoreId(storeId);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCustomers([]);
+          setCustomersStoreId(storeId);
+        }
+      });
     return () => { cancelled = true; };
   }, [storeId]);
 
   const customerName = (customerId: number | null) => {
     if (customerId == null) return "Walk-in";
+    if (customersStoreId !== storeId) return "Loading customer…";
     return customers.find((customer) => customer.id === customerId)?.name ?? "Customer not found";
   };
 
