@@ -43,7 +43,8 @@ test("login explains that a successfully changed password requires a new sign-in
   const page = source("app/login/page.tsx");
   assert.match(page, /reason === "password-changed"/);
   assert.match(page, /Password changed successfully\. Sign in with your new password/);
-  assert.match(page, /currentReason === "session-expired"/);
+  assert.match(page, /reason === "session-expired"/);
+  assert.match(page, /useSyncExternalStore\(subscribeToLocation, getLoginReason, \(\) => ""\)/);
 });
 
 
