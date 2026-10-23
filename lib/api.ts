@@ -87,8 +87,20 @@ export async function api<T = unknown>(path: string, init: ApiInit = {}): Promis
     );
   }
 
-  // Mutations may invalidate any cached read, including product prices and sale totals.
-  if (!isGet) GET_CACHE.clear();
+  // Mutations invalidate cached reads, including product prices, sale totals, and stock data.
+  if (!isGet) {
+    GET_CACHE.clear();
+
+    const mutationPath = path.split("?")[0];
+    const changesInventory =
+      /^\/product\/(create|update|delete|adjust|receivings)$/.test(mutationPath) ||
+      /^\/sales(?:\/.*)?$/.test(mutationPath) ||
+      /^\/refunds(?:\/.*)?$/.test(mutationPath);
+
+    if (changesInventory && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("retailos:inventory-changed"));
+    }
+  }
 
   const result = (body?.data ?? body) as T;
   if (cacheKey) setCached(cacheKey, result);
