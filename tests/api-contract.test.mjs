@@ -132,3 +132,21 @@ test("navigation contains only implemented routes and does not filter by unsuppo
   assert.doesNotMatch(shell, /ADMIN_ROLES|MANAGEMENT_ROLES|ALL_ROLES|activeRole|item\.roles/);
   assert.doesNotMatch(shell, /href="\/notification"/);
 });
+
+
+test("inventory category tabs filter by saved category without mutating products", () => {
+  const page = source("app/inventory/page.tsx");
+  const types = source("lib/types.ts");
+  assert.match(types, /export type Category = \{/);
+  assert.match(types, /category_id\?: number \| null/);
+  assert.match(page, /\/categories\?store_id=/);
+  assert.match(page, /role="tablist"/);
+  assert.match(page, /aria-selected=\{selectedCategoryId === "all"\}/);
+  assert.match(page, /const filteredProducts = selectedCategoryId === "all"[\s\S]*?product\.category_id/);
+  assert.match(page, /retailos:inventory:selected-category:/);
+  assert.match(page, /filteredProducts\.map\(\(product\) =>/);
+  assert.match(page, /Loading categories/);
+  assert.match(page, /Categories could not be loaded/);
+  assert.match(page, /No products or services are assigned to this category yet/);
+  assert.doesNotMatch(page, /selectCategory[\s\S]{0,250}api\(/);
+});
