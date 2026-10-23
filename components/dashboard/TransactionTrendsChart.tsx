@@ -113,7 +113,7 @@ export default function TransactionTrendsChart() {
           total: values.reduce((sum, value) => sum + value, 0),
         };
       })
-      .filter((item): item is Omit<TrendSeries, "color"> => item !== null)
+      .filter((item): item is TrendSeries => item !== null)
       .sort((a, b) => b.total - a.total)
       .slice(0, 8)
       .map((item, index) => ({ ...item, color: COLORS[index % COLORS.length] }));
