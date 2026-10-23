@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import BrandMark from "@/components/brand/BrandMark";
 import LandingPricingSection from "@/components/landing/PricingSection";
