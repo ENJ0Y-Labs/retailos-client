@@ -81,3 +81,155 @@ summary:focus-visible {
 
 /* Stronger contrast for previously faint secondary copy on dark surfaces. */
 .text-white\/30,.text-white\/35,.text-white\/40,.text-white\/45,.text-white\/50 {color:rgb(255 255 255 / .75)}
+
+
+/* Theme tokens keep the existing dark palette and define the agreed warm light palette. */
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --app-bg: #0b0b0b;
+  --surface: #121212;
+  --surface-raised: #151515;
+  --surface-subtle: #1b1b1b;
+  --app-text: #ffffff;
+  --muted-text: #c4c4c4;
+  --app-border: rgb(255 255 255 / 0.14);
+  --field-bg: #101010;
+  --field-text: #ffffff;
+  --accent: #f97316;
+  --accent-hover: #fb923c;
+  --accent-text: #17100a;
+  --focus-ring: #fb923c;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --app-bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-raised: #efeee9;
+  --surface-subtle: #e7e5df;
+  --app-text: #25231f;
+  --muted-text: #57534e;
+  --app-border: #d6d3cb;
+  --field-bg: #ffffff;
+  --field-text: #25231f;
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
+  --accent-text: #ffffff;
+  --focus-ring: #9a3412;
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+html[data-theme="light"] body {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* Translate the app's established dark utility classes to light surfaces. */
+html[data-theme="light"] [class*="bg-[#0b0b0b]"] { background-color: var(--app-bg) !important; }
+html[data-theme="light"] [class*="bg-[#121212]"],
+html[data-theme="light"] [class*="bg-[#151515]"],
+html[data-theme="light"] [class*="bg-[#101010]"],
+html[data-theme="light"] [class*="bg-[#161616]"],
+html[data-theme="light"] [class*="bg-[#171717]"],
+html[data-theme="light"] [class*="bg-[#1a1a1a]"],
+html[data-theme="light"] [class*="bg-[#1b1b1b]"],
+html[data-theme="light"] [class*="bg-[#202020]"] {
+  background-color: var(--surface) !important;
+}
+html[data-theme="light"] [class*="bg-white/5"],
+html[data-theme="light"] [class*="bg-white/10"],
+html[data-theme="light"] [class*="bg-white/\[0.05\]"],
+html[data-theme="light"] [class*="bg-white/\[0.06\]"] {
+  background-color: var(--surface-raised) !important;
+}
+html[data-theme="light"] [class*="border-white/"] { border-color: var(--app-border) !important; }
+html[data-theme="light"] [class*="text-white/"] { color: var(--muted-text) !important; }
+html[data-theme="light"] .text-white { color: var(--app-text) !important; }
+
+/* Warm, deeper orange preserves the brand while improving contrast on light surfaces. */
+html[data-theme="light"] [class*="bg-orange-500"],
+html[data-theme="light"] [class*="bg-orange-400"] {
+  background-color: var(--accent) !important;
+  color: var(--accent-text) !important;
+}
+html[data-theme="light"] [class*="hover:bg-orange-400"]:hover,
+html[data-theme="light"] [class*="hover:bg-orange-500"]:hover {
+  background-color: var(--accent-hover) !important;
+}
+html[data-theme="light"] [class*="text-orange-300"],
+html[data-theme="light"] [class*="text-orange-400"],
+html[data-theme="light"] [class*="text-orange-500"] { color: var(--accent) !important; }
+html[data-theme="light"] [class*="border-orange-"] { border-color: var(--accent) !important; }
+html[data-theme="light"] [class*="ring-orange-"] { --tw-ring-color: var(--focus-ring) !important; }
+
+/* Inputs, selects, dropdown options, and editable controls. */
+html[data-theme="light"] .field,
+html[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  background-color: var(--field-bg);
+  color: var(--field-text);
+  border-color: #b8b4aa;
+}
+html[data-theme="light"] .field::placeholder,
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder { color: #625e57; opacity: 1; }
+html[data-theme="light"] .field:focus,
+html[data-theme="light"] input:focus-visible,
+html[data-theme="light"] select:focus-visible,
+html[data-theme="light"] textarea:focus-visible {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px rgb(154 52 18 / 0.18);
+}
+html[data-theme="light"] select option { background: #ffffff; color: #25231f; }
+
+/* Keep common status messaging legible without removing its semantic color. */
+html[data-theme="light"] [class*="text-red-300"],
+html[data-theme="light"] [class*="text-red-400"] { color: #b42318 !important; }
+html[data-theme="light"] [class*="text-green-300"],
+html[data-theme="light"] [class*="text-green-400"] { color: #176b3a !important; }
+html[data-theme="light"] [class*="text-yellow-300"],
+html[data-theme="light"] [class*="text-amber-300"] { color: #854d0e !important; }
+html[data-theme="light"] [class*="text-blue-300"],
+html[data-theme="light"] [class*="text-blue-400"] { color: #1d4ed8 !important; }
+
+/* Tables, chart labels, dialogs, and notifications inherit readable text and borders. */
+html[data-theme="light"] table,
+html[data-theme="light"] th,
+html[data-theme="light"] td { border-color: var(--app-border); }
+html[data-theme="light"] th { color: var(--muted-text); }
+html[data-theme="light"] dialog,
+html[data-theme="light"] [role="dialog"],
+html[data-theme="light"] [role="alertdialog"] {
+  background-color: var(--surface);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+html[data-theme="light"] svg text { fill: currentColor; }
+html[data-theme="light"] button:disabled,
+html[data-theme="light"] [aria-disabled="true"] { opacity: 0.58; }
+html[data-theme="light"] :focus-visible {
+  outline-color: var(--focus-ring);
+}
+
+/* Preserve active navigation and selected controls in both themes. */
+html[data-theme="light"] nav a[aria-current="page"] {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+html[data-theme="light"] [aria-selected="true"],
+html[data-theme="light"] [aria-pressed="true"] {
+  outline-color: var(--focus-ring);
+}
+
+/* Mobile drawers and overlays retain separation from the page surface. */
+html[data-theme="light"] [class*="bg-black/60"] { background-color: rgb(20 20 20 / 0.45) !important; }
+
+@media (max-width: 640px) {
+  html[data-theme="light"] input,
+  html[data-theme="light"] select,
+  html[data-theme="light"] textarea,
+  html[data-theme="light"] button { -webkit-tap-highlight-color: rgb(154 52 18 / 0.12); }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
 
 function subscribeToLocation(callback: () => void) {
   window.addEventListener("popstate", callback);
@@ -39,7 +40,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0b0b0b] px-4 text-white">
+    <main className="relative flex min-h-screen items-center justify-center bg-[#0b0b0b] px-4 text-white">
+      <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
       <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#151515] p-8 shadow-2xl">
         <p className="mb-8 text-lg font-bold tracking-tight">TX <span className="text-orange-500">RetailOS</span></p>
         <div className="mb-7">
