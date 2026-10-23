@@ -39,7 +39,7 @@ test("feedback confirms success only after the server request resolves", () => {
 
 test("feedback prevents duplicate requests and retries the exact payload after uncertain outcomes", () => {
   const page = source("app/feedback/page.tsx");
-  assert.match(page, /if \(submitting \|\| attempt\) return/);
+  assert.match(page, /if \\(submitting \\|\\| submitLock\\.current \\|\\| attempt\\) return/);
   assert.match(page, /disabled=\{submitting \|\| lockedForRecovery\}/);
   assert.match(page, /setAttempt\(payload\)/);
   assert.match(page, /void send\(attempt\)/);
