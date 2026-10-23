@@ -291,7 +291,9 @@ export default function SalesPage() {
         unit_id: item.unitId,
         quantity: item.quantity,
         ...(isServiceProduct(item.product) ? { unit_price: item.price } : {}),
-        ...(includeExpectedPrice ? { expected_unit_price: item.price } : {}),
+        ...(includeExpectedPrice ? {
+          expected_unit_price: Number(unitsFor(item.product).find((unit) => unit.id === item.unitId)?.price ?? item.price),
+        } : {}),
       })),
     };
   }
@@ -466,7 +468,7 @@ export default function SalesPage() {
       catalog: undefined,
       code: undefined,
     };
-    const nextPending = [...pendingSales, revised];
+    const nextPending = [...pendingSales.filter((item) => item.id !== sale.id), revised];
     const snapshot: OfflineSnapshot = { cart, customerId, paid, paymentMethod, transactionId, pendingSales: nextPending };
     try {
       localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
@@ -476,7 +478,7 @@ export default function SalesPage() {
       return;
     }
     setPendingSales(nextPending);
-    setMessage(`Created revised attempt ${newId}. The rejected attempt remains visible for reference.`);
+    setMessage(`Created revised attempt ${newId} after your confirmation. The rejected payload was replaced with the reviewed version.`);
     setError("");
   }
 
@@ -864,7 +866,7 @@ export default function SalesPage() {
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(sale.status === "pending" || (sale.status === "failed" && sale.retryable)) && (
-                    <button type="button" disabled={!isOnline || sale.status === "syncing"} onClick={() => void syncPendingSale(sale)} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Retry with same reference</button>
+                    <button type="button" disabled={!isOnline} onClick={() => void syncPendingSale(sale)} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Retry with same reference</button>
                   )}
                   {sale.status === "conflict" && sale.code !== "IDEMPOTENCY_KEY_REUSED" && (
                     <>
