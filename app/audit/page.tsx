@@ -21,7 +21,7 @@ type AuditEntry = {
 
 type AuditResponse = { audit_logs: AuditEntry[]; count: number; limit: number };
 
-const SENSITIVE_KEY = /(password|token|secret|credential|authorization|cookie|session|api[_-]?key|card[_-]?number|cvv)/i;
+const SENSITIVE_KEY = /(password|token|secret|credential|authorization|cookie|session|api[_-]?key|card[_-]?number|cvv|email|phone|mobile|address|customer[_-]?name|full[_-]?name)/i;
 
 function safeDetails(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(safeDetails);
@@ -135,8 +135,8 @@ export default function AuditHistoryPage() {
           </label>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => void loadLogs()} disabled={loading} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">Apply filters</button>
           <button type="button" onClick={clearFilters} disabled={loading && !activeFilters.length} className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50">Clear filters</button>
+          <span className="text-xs text-white/45">Filters apply automatically</span>
           <span className="text-xs text-white/45">Showing up to 200 newest records</span>
         </div>
         {activeFilters.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Active audit filters">{activeFilters.map((filter) => <span key={filter} className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs text-orange-200">{filter}</span>)}</div>}
