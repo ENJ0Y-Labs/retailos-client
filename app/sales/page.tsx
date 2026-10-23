@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Customer, Product, ProductUnit, Receipt, SaleSummary } from "@/lib/types";
 
 type SalesProduct = Product;
@@ -16,6 +16,45 @@ type CartItem = {
   unitId: number;
   quantity: number;
   price: number;
+};
+
+type OfflineSaleItem = {
+  product_id: number;
+  unit_id: number;
+  quantity: number;
+  unit_price?: number;
+  expected_unit_price?: number;
+};
+
+type OfflineSalePayload = {
+  store_id: number;
+  customer_id: number | null;
+  client_transaction_id: string;
+  payment_method: "Cash" | "Transfer" | "POS";
+  amount_paid: number;
+  items: OfflineSaleItem[];
+};
+
+type PendingSale = {
+  id: string;
+  createdAt: string;
+  total: number;
+  customerLabel: string;
+  payload: OfflineSalePayload;
+  status: "pending" | "syncing" | "failed" | "conflict";
+  message?: string;
+  code?: string;
+  retryable: boolean;
+  catalog?: SalesProduct[];
+};
+
+type OfflineSnapshot = {
+  cart: CartItem[];
+  customerId: string;
+  paid: string;
+  paymentMethod: string;
+  transactionId: string;
+  pendingSales: PendingSale[];
 };
 
 const normalizePhone = (value: string) => value.replace(/\D/g, "");
@@ -30,6 +69,9 @@ const money = (value: number) =>
 export default function SalesPage() {
   const { user } = useAuth();
   const storeId = user?.store_id ?? null;
+  const accountStorageKey = user && storeId
+    ? `retailos:offline-checkout:v1:user:${user.id}:store:${storeId}`
+    : null;
 
   const [products, setProducts] = useState<SalesProduct[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -53,21 +95,86 @@ export default function SalesPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const [storageWarning, setStorageWarning] = useState("");
+  const syncingIds = useRef(new Set<string>());
 
   const checkoutLock = useRef(false);
+  const accountReady = Boolean(accountStorageKey && hydratedKey === accountStorageKey);
 
   useEffect(() => {
-    let pendingId: string | null = null;
-    try {
-      pendingId = localStorage.getItem("retailos-pending-sale-id");
-    } catch {
-      // Storage may be unavailable in restricted browser environments.
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!accountStorageKey) {
+      setHydratedKey(null);
+      setCart([]);
+      setPendingSales([]);
+      setCustomerId("");
+      setPaid("");
+      setTransactionId("");
+      return;
     }
 
-    void Promise.resolve().then(() => {
-      if (pendingId) setTransactionId(pendingId);
-    });
-  }, []);
+    setHydratedKey(null);
+    try {
+      const raw = localStorage.getItem(accountStorageKey);
+      const saved = raw ? JSON.parse(raw) as Partial<OfflineSnapshot> : {};
+      setCart(Array.isArray(saved.cart) ? saved.cart : []);
+      setCustomerId(typeof saved.customerId === "string" ? saved.customerId : "");
+      setPaid(typeof saved.paid === "string" ? saved.paid : "");
+      setPaymentMethod(typeof saved.paymentMethod === "string" ? saved.paymentMethod : "CASH");
+      setTransactionId(typeof saved.transactionId === "string" ? saved.transactionId : "");
+      setPendingSales(Array.isArray(saved.pendingSales)
+        ? saved.pendingSales.map((sale) => ({
+            ...sale,
+            status: sale.status === "syncing" ? "pending" : sale.status,
+          }))
+        : []);
+      setStorageWarning("");
+    } catch {
+      setStorageWarning("RetailOS could not read saved checkout data. Do not clear browser storage or close this tab until you have copied any visible pending sale details.");
+      setCart([]);
+      setPendingSales([]);
+      setCustomerId("");
+      setPaid("");
+      setTransactionId("");
+    }
+    setHydratedKey(accountStorageKey);
+  }, [accountStorageKey]);
+
+  useEffect(() => {
+    if (!accountStorageKey || hydratedKey !== accountStorageKey) return;
+    try {
+      const snapshot: OfflineSnapshot = { cart, customerId, paid, paymentMethod, transactionId, pendingSales };
+      localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
+      setStorageWarning("");
+    } catch {
+      setStorageWarning("Browser storage is unavailable or full. Checkout data may be lost on refresh. Do not queue an offline sale until storage works again.");
+    }
+  }, [accountStorageKey, hydratedKey, cart, customerId, paid, paymentMethod, transactionId, pendingSales]);
+
+  useEffect(() => {
+    if (!accountReady) return;
+    const hasUnsyncedData = cart.length > 0 || pendingSales.some((sale) => sale.status !== "conflict" || sale.retryable);
+    if (!hasUnsyncedData) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [accountReady, cart.length, pendingSales]);
 
   const load = useCallback(async () => {
     if (!storeId) {
@@ -106,6 +213,234 @@ export default function SalesPage() {
   useEffect(() => {
     void Promise.resolve().then(() => load());
   }, [load]);
+
+  const syncPendingSale = useCallback(async (sale: PendingSale) => {
+    if (!navigator.onLine || syncingIds.current.has(sale.id)) return;
+    syncingIds.current.add(sale.id);
+    setPendingSales((current) => current.map((item) =>
+      item.id === sale.id ? { ...item, status: "syncing", message: "Sending this sale to the server…" } : item,
+    ));
+
+    try {
+      const result = await api<{
+        sync_status?: "accepted" | "already_processed" | "rejected";
+        receipt?: Receipt;
+        sale?: { id: number };
+      }>("/sales/sync", { method: "POST", json: sale.payload });
+
+      if (result.sync_status === "accepted" || result.sync_status === "already_processed") {
+        setPendingSales((current) => current.filter((item) => item.id !== sale.id));
+        setMessage(result.sync_status === "already_processed"
+          ? `Sale ${sale.id} was already accepted by the server. No duplicate sale was created.`
+          : `Sale ${sale.id} was accepted by the server.`);
+        setError("");
+        void load();
+      } else {
+        setPendingSales((current) => current.map((item) => item.id === sale.id
+          ? { ...item, status: "conflict", retryable: false, message: "The server did not confirm this sale. Review the server response before creating another attempt." }
+          : item));
+      }
+    } catch (cause) {
+      const messageText = cause instanceof Error ? cause.message : "Synchronization failed.";
+      const permanent = cause instanceof ApiError && cause.status >= 400 && cause.status < 500;
+      const code = cause instanceof ApiError ? cause.code : undefined;
+      setPendingSales((current) => current.map((item) => item.id === sale.id
+        ? {
+            ...item,
+            status: permanent ? "conflict" : "failed",
+            retryable: !permanent,
+            message: messageText,
+            code,
+          }
+        : item));
+    } finally {
+      syncingIds.current.delete(sale.id);
+    }
+  }, [load]);
+
+  useEffect(() => {
+    if (!accountReady || !isOnline) return;
+    pendingSales
+      .filter((sale) => sale.status === "pending")
+      .forEach((sale) => void syncPendingSale(sale));
+  }, [accountReady, isOnline, pendingSales, syncPendingSale]);
+
+  function buildSalePayload(id: string, includeExpectedPrice = false): OfflineSalePayload {
+    return {
+      store_id: Number(storeId),
+      customer_id: customerId ? Number(customerId) : null,
+      client_transaction_id: id,
+      payment_method: paymentMethod === "CASH" ? "Cash" : paymentMethod === "TRANSFER" ? "Transfer" : "POS",
+      amount_paid: amountPaid,
+      items: cart.map((item) => ({
+        product_id: item.product.id,
+        unit_id: item.unitId,
+        quantity: item.quantity,
+        ...(isServiceProduct(item.product) ? { unit_price: item.price } : {}),
+        ...(includeExpectedPrice ? { expected_unit_price: item.price } : {}),
+      })),
+    };
+  }
+
+  function savePendingSale(payload: OfflineSalePayload, saleTotal: number, customerLabel: string): boolean {
+    if (!accountStorageKey || !accountReady) {
+      setError("Checkout data is still being restored for this account. Wait a moment and try again.");
+      return false;
+    }
+    const pending: PendingSale = {
+      id: payload.client_transaction_id,
+      createdAt: new Date().toISOString(),
+      total: saleTotal,
+      customerLabel,
+      payload,
+      status: "pending",
+      retryable: true,
+      message: "Saved on this device. This is not a confirmed sale yet.",
+    };
+    const nextPending = [...pendingSales.filter((sale) => sale.id !== pending.id), pending];
+    const snapshot: OfflineSnapshot = {
+      cart: [],
+      customerId: "",
+      paid: "",
+      paymentMethod,
+      transactionId: "",
+      pendingSales: nextPending,
+    };
+    try {
+      localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
+    } catch {
+      setStorageWarning("Browser storage is unavailable or full. The sale was not queued and your cart has been kept on screen.");
+      setError("Unable to save this sale locally. Your cart has not been cleared. Check browser storage before retrying.");
+      return false;
+    }
+    setPendingSales(nextPending);
+    setCart([]);
+    setCustomerId("");
+    setCustomerQuery("");
+    setPaid("");
+    setTransactionId("");
+    setReceipt(null);
+    setMessage(`Sale saved locally with reference ${pending.id}. It is pending synchronization and is NOT confirmed.`);
+    setError("");
+    setStorageWarning("");
+    return true;
+  }
+
+  async function refreshPendingCatalog(saleId: string) {
+    if (!storeId || !navigator.onLine) {
+      setError("Reconnect to refresh current prices and stock before resolving this conflict.");
+      return;
+    }
+    try {
+      const data = await api<{ products: SalesProduct[] }>(
+        `/product/list?store_id=${encodeURIComponent(String(storeId))}`,
+        { refresh: true },
+      );
+      setPendingSales((current) => current.map((sale) => sale.id === saleId
+        ? { ...sale, catalog: data.products ?? [], message: "Current catalog loaded. Review prices and available stock before confirming a revised attempt." }
+        : sale));
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not refresh current prices and stock.");
+    }
+  }
+
+  function updatePendingQuantity(saleId: string, productId: number, unitId: number, quantity: number) {
+    if (!Number.isInteger(quantity) || quantity < 1) return;
+    setPendingSales((current) => current.map((sale) => sale.id !== saleId ? sale : {
+      ...sale,
+      payload: {
+        ...sale.payload,
+        items: sale.payload.items.map((item) =>
+          item.product_id === productId && item.unit_id === unitId ? { ...item, quantity } : item,
+        ),
+      },
+    }));
+  }
+
+  function confirmRevisedPendingSale(sale: PendingSale) {
+    if (!sale.catalog || !accountStorageKey) return;
+    if (sale.code === "IDEMPOTENCY_KEY_REUSED") {
+      setError("This transaction reference was reused with different data. Do not retry it with a new reference; reconcile the original sale with the server first.");
+      return;
+    }
+
+    const currentById = new Map(sale.catalog.map((product) => [product.id, product]));
+    const revisedItems: OfflineSaleItem[] = [];
+    let issue = "";
+    for (const item of sale.payload.items) {
+      const product = currentById.get(item.product_id);
+      const unit = product?.units?.find((candidate) => candidate.id === item.unit_id);
+      if (!product || !unit) {
+        issue = `The selected product or selling unit for item #${item.product_id} no longer exists. Remove this item or reconcile it manually before retrying.`;
+        break;
+      }
+      revisedItems.push({
+        ...item,
+        expected_unit_price: Number(unit.price),
+        ...(product.product_type.toLowerCase() === "service" ? { unit_price: item.unit_price ?? Number(unit.price) } : { unit_price: undefined }),
+      });
+    }
+    if (issue) { setError(issue); return; }
+
+    const baseTotals = new Map<number, number>();
+    for (const item of revisedItems) {
+      const product = currentById.get(item.product_id)!;
+      const unit = product.units.find((candidate) => candidate.id === item.unit_id)!;
+      if (product.product_type.toLowerCase() !== "service") {
+        baseTotals.set(product.id, (baseTotals.get(product.id) ?? 0) + item.quantity * Number(unit.base_quantity));
+      }
+    }
+    for (const [productId, quantity] of baseTotals) {
+      const product = currentById.get(productId)!;
+      if (quantity > Number(product.stock_quantity ?? 0)) {
+        setError(`Current stock for ${product.name} is still insufficient. Reduce the quantity before confirming the revised attempt.`);
+        return;
+      }
+    }
+
+    const revisedTotal = revisedItems.reduce((sum, item) => {
+      const product = currentById.get(item.product_id)!;
+      const unit = product.units.find((candidate) => candidate.id === item.unit_id)!;
+      const unitPrice = product.product_type.toLowerCase() === "service" ? Number(item.unit_price ?? unit.price) : Number(unit.price);
+      return sum + unitPrice * item.quantity;
+    }, 0);
+    if (sale.payload.amount_paid > revisedTotal) {
+      setError("The previous amount paid is greater than the revised total. Resolve the payment amount manually before retrying.");
+      return;
+    }
+    const newId = crypto.randomUUID();
+    const revisedPayload: OfflineSalePayload = {
+      ...sale.payload,
+      client_transaction_id: newId,
+      items: revisedItems,
+    };
+    const revised: PendingSale = {
+      ...sale,
+      id: newId,
+      createdAt: new Date().toISOString(),
+      total: revisedTotal,
+      payload: revisedPayload,
+      status: "pending",
+      retryable: true,
+      message: "Revised sale created after explicit review. Waiting for server acceptance.",
+      catalog: undefined,
+      code: undefined,
+    };
+    const nextPending = [...pendingSales, revised];
+    const snapshot: OfflineSnapshot = { cart, customerId, paid, paymentMethod, transactionId, pendingSales: nextPending };
+    try {
+      localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
+    } catch {
+      setStorageWarning("Browser storage is unavailable or full. The revised attempt was not created.");
+      setError("Could not save the revised sale locally. No new attempt was submitted.");
+      return;
+    }
+    setPendingSales(nextPending);
+    setMessage(`Created revised attempt ${newId}. The rejected attempt remains visible for reference.`);
+    setError("");
+  }
+
 
   const filteredCustomers = useMemo(() => {
     const term = customerQuery.trim().toLowerCase();
@@ -268,6 +603,20 @@ export default function SalesPage() {
       return;
     }
 
+    if (!accountReady) {
+      setError("Checkout data is still being restored. Wait a moment before completing a sale.");
+      return;
+    }
+
+    if (!navigator.onLine) {
+      const offlineId = transactionId || crypto.randomUUID();
+      const payload = buildSalePayload(offlineId, true);
+      savePendingSale(payload, total, customerId
+        ? customers.find((customer) => String(customer.id) === customerId)?.name ?? `Customer #${customerId}`
+        : "Walk-in");
+      return;
+    }
+
     // Re-read authoritative product data immediately before checkout because an open cart may contain stale prices.
     try {
       const latest = await api<{ products: SalesProduct[] }>(
@@ -305,23 +654,12 @@ export default function SalesPage() {
 
     const saleTransactionId = transactionId || crypto.randomUUID();
     setTransactionId(saleTransactionId);
+    const salePayload = buildSalePayload(saleTransactionId);
 
     try {
       const data = await api<{ receipt: Receipt }>("/sales", {
         method: "POST",
-        json: {
-          store_id: storeId,
-          customer_id: customerId ? Number(customerId) : null,
-          client_transaction_id: saleTransactionId,
-          payment_method: paymentMethod === "CASH" ? "Cash" : paymentMethod === "TRANSFER" ? "Transfer" : "POS",
-          amount_paid: amountPaid,
-          items: cart.map((item) => ({
-            product_id: item.product.id,
-            unit_id: item.unitId,
-            quantity: item.quantity,
-            ...(isServiceProduct(item.product) ? { unit_price: item.price } : {}),
-          })),
-        },
+        json: salePayload,
       });
 
       setReceipt(data.receipt);
@@ -332,30 +670,23 @@ export default function SalesPage() {
       setCustomerQuery("");
       setTransactionId("");
 
-      try {
-        localStorage.removeItem("retailos-pending-sale-id");
-      } catch {
-        // Ignore unavailable browser storage.
-      }
-
+      setPendingSales((current) => current.filter((sale) => sale.id !== saleTransactionId));
       await load();
     } catch (e) {
-      // Keep the transaction ID so a retry can use the same idempotency key.
-      try {
-        localStorage.setItem(
-          "retailos-pending-sale-id",
-          saleTransactionId,
+      // A lost response is ambiguous. Keep the exact identifier and payload so
+      // the idempotent sync endpoint can safely determine whether it was accepted.
+      if (!(e instanceof ApiError) || e.status >= 500 || !navigator.onLine) {
+        savePendingSale(salePayload, total, customerId
+          ? customers.find((customer) => String(customer.id) === customerId)?.name ?? `Customer #${customerId}`
+          : "Walk-in");
+      } else {
+        const failure = e.message || "Unable to complete sale.";
+        setError(
+          /price.*chang|chang.*price/i.test(failure)
+            ? "A product price changed before the sale could be completed. Review the current catalog and retry only after confirming the changed total."
+            : failure,
         );
-      } catch {
-        // The in-memory transaction ID is still retained.
       }
-
-      const failure = e instanceof Error ? e.message : "Unable to complete sale.";
-      setError(
-        /price.*chang|chang.*price/i.test(failure)
-          ? "A product price changed before the sale could be completed. The sale was not completed. Refresh the cart and review the updated total before trying again."
-          : failure,
-      );
     } finally {
       checkoutLock.current = false;
       setSubmitting(false);
@@ -410,7 +741,87 @@ export default function SalesPage() {
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+      <section aria-live="polite" className="mb-5 rounded-xl border border-white/10 bg-[#151515] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Connection and offline checkout</h2>
+            <p className={`mt-1 text-sm ${isOnline ? "text-green-300" : "text-amber-300"}`}>
+              {isOnline ? "Online · pending sales can synchronize" : "Offline · new sales will be saved locally, not confirmed"}
+            </p>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${isOnline ? "bg-green-500/10 text-green-300" : "bg-amber-500/10 text-amber-300"}`}>
+            {isOnline ? "ONLINE" : "OFFLINE"}
+          </span>
+        </div>
+        <p className="mt-3 text-xs text-white/50">Checkout data is saved in this browser for this signed-in account and store. Clearing browser data, using private browsing, or losing access to this device can destroy unsynchronized sales. Keep this device's browser storage intact until every sale is confirmed.</p>
+        {storageWarning && <p role="alert" className="mt-3 text-sm text-amber-200">{storageWarning}</p>}
+      </section>
+
+      {accountReady && pendingSales.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-amber-500/30 bg-[#151515] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold">Pending sales ({pendingSales.length})</h2>
+              <p className="mt-1 text-sm text-white/55">These sales are separate from confirmed server sales. A local save is never a receipt or proof of payment.</p>
+            </div>
+            <button type="button" disabled={!isOnline} onClick={() => pendingSales.filter((sale) => sale.status === "failed" && sale.retryable).forEach((sale) => void syncPendingSale(sale))} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Retry failed syncs</button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {pendingSales.map((sale) => (
+              <article key={sale.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{sale.customerLabel} · {money(sale.total)}</p>
+                    <p className="mt-1 break-all text-xs text-white/45">Reference: {sale.id}</p>
+                    <p className="mt-1 text-xs text-white/45">Saved {new Date(sale.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-xs ${sale.status === "conflict" ? "bg-red-500/10 text-red-300" : sale.status === "failed" ? "bg-amber-500/10 text-amber-200" : sale.status === "syncing" ? "bg-blue-500/10 text-blue-200" : "bg-white/10 text-white/70"}`}>
+                    {sale.status === "conflict" ? "Needs review" : sale.status === "failed" ? "Sync failed" : sale.status === "syncing" ? "Synchronizing" : "Pending"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-white/70">{sale.message ?? "Waiting to synchronize."}</p>
+                {sale.code && <p className="mt-1 text-xs text-red-200">Server error: {sale.code}</p>}
+                <div className="mt-3 space-y-2">
+                  {sale.payload.items.map((item) => {
+                    const product = sale.catalog?.find((entry) => entry.id === item.product_id);
+                    const unit = product?.units?.find((entry) => entry.id === item.unit_id);
+                    return (
+                      <div key={`${item.product_id}-${item.unit_id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white/5 p-3 text-sm">
+                        <div>
+                          <p>{product?.name ?? `Product #${item.product_id}`} · {unit?.name ?? `Unit #${item.unit_id}`}</p>
+                          {sale.catalog && product && unit && (
+                            <p className="mt-1 text-xs text-white/50">Current price: {money(Number(unit.price))} · Available stock: {product.product_type.toLowerCase() === "service" ? "Not tracked" : `${product.stock_quantity} ${product.base_unit}`}</p>
+                          )}
+                        </div>
+                        {sale.status === "conflict" && sale.catalog && (
+                          <label className="text-xs text-white/60">Quantity
+                            <input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updatePendingQuantity(sale.id, item.product_id, item.unit_id, Number(event.target.value))} className="field ml-2 w-20" />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(sale.status === "pending" || (sale.status === "failed" && sale.retryable)) && (
+                    <button type="button" disabled={!isOnline || sale.status === "syncing"} onClick={() => void syncPendingSale(sale)} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Retry with same reference</button>
+                  )}
+                  {sale.status === "conflict" && sale.code !== "IDEMPOTENCY_KEY_REUSED" && (
+                    <>
+                      <button type="button" disabled={!isOnline} onClick={() => void refreshPendingCatalog(sale.id)} className="rounded-lg bg-white/10 px-3 py-2 text-sm disabled:opacity-40">Refresh prices and stock</button>
+                      {sale.catalog && <button type="button" onClick={() => confirmRevisedPendingSale(sale)} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black">Confirm revised sale and retry</button>}
+                    </>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!accountReady && <p role="status" className="mb-5 text-sm text-white/50">Restoring checkout data for the signed-in account…</p>}
+
+      {accountReady && <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-semibold">Products and services</h2>
@@ -704,9 +1115,9 @@ export default function SalesPage() {
             {submitting ? "Processing..." : "Complete sale"}
           </button>
         </aside>
-      </div>
+      </div>}
 
-      <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
+      {accountReady && <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <h2 className="font-semibold">Sales history</h2>
 
         <div className="mt-4 overflow-x-auto">
@@ -772,9 +1183,9 @@ export default function SalesPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </section>}
 
-      {customerModalOpen && (
+      {accountReady && customerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" role="presentation"
           onMouseDown={(event) => { if (event.target === event.currentTarget && !creatingCustomer) setCustomerModalOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="create-customer-title" className="w-full max-w-md rounded-2xl border border-white/10 bg-[#151515] p-5 shadow-2xl">
@@ -795,7 +1206,7 @@ export default function SalesPage() {
         </div>
       )}
 
-      {receipt && (
+      {accountReady && receipt && (
         <section className="sale-receipt-print mt-6 rounded-2xl border border-orange-500/20 bg-[#151515] p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">
