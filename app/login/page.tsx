@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
+import BrandMark from "@/components/brand/BrandMark";
 
 function subscribeToLocation(callback: () => void) {
   window.addEventListener("popstate", callback);
@@ -45,7 +45,7 @@ export default function LoginPage() {
       <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
       <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#151515] p-8 shadow-2xl">
         <div className="mb-8 flex items-center gap-3">
-          <Image src="/brand/logo-light.svg" alt="" width={48} height={48} priority />
+          <BrandMark size={48} />
           <p className="text-xl font-bold tracking-tight">TX <span className="text-orange-500">RetailOS</span></p>
         </div>
         <div className="mb-7">
