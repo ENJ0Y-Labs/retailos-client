@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { api } from "@/lib/api";
-import { formatNigeriaDateTime } from "@/lib/nigeria-time";
+import { formatNigeriaDate, formatNigeriaDateTime } from "@/lib/nigeria-time";
 import type { Category, Customer, Receipt } from "@/lib/types";
 
 type ExportSaleItem = {
@@ -185,8 +185,8 @@ export default function TransactionsPage() {
   const activeFilters = useMemo(() => {
     const filters: { key: string; label: string }[] = [];
     if (query.trim()) filters.push({ key: "search", label: "Search: " + query.trim() });
-    if (startDate) filters.push({ key: "start", label: "From: " + startDate });
-    if (endDate) filters.push({ key: "end", label: "To: " + endDate });
+    if (startDate) filters.push({ key: "start", label: "From: " + formatNigeriaDate(startDate + "T12:00:00+01:00") });
+    if (endDate) filters.push({ key: "end", label: "To: " + formatNigeriaDate(endDate + "T12:00:00+01:00") });
     if (categoryId) {
       filters.push({
         key: "category",
@@ -366,7 +366,7 @@ export default function TransactionsPage() {
             type="button"
             onClick={clearFilters}
             disabled={activeFilters.length === 0}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-w-[112px] rounded-lg border border-white/15 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-40"
           >
             Clear Filters
           </button>
