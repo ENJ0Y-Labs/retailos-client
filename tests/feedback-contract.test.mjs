@@ -42,7 +42,7 @@ test("feedback prevents duplicate requests and retries the exact payload after u
   assert.match(page, /if \(submitting \|\| attempt\) return/);
   assert.match(page, /disabled=\{submitting \|\| lockedForRecovery\}/);
   assert.match(page, /setAttempt\(payload\)/);
-  assert.match(page, /await send\(attempt\)/);
+  assert.match(page, /void send\(attempt\)/);
   assert.match(page, /Retry same submission/);
 });
 
