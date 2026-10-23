@@ -75,12 +75,17 @@ export default function TransactionsPage() {
       return;
     }
 
+    if (startDate && endDate && startDate > endDate) {
+      setRows([]);
+      setError("Start date must be on or before end date.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
       const params = new URLSearchParams({ store_id: String(storeId) });
-      params.set("page", String(page));
-      params.set("limit", String(LIMIT));
       if (paymentMethod) params.set("payment_method", paymentMethod);
       if (startDate) params.set("start_date", startDate);
       if (endDate) params.set("end_date", endDate);
@@ -88,11 +93,12 @@ export default function TransactionsPage() {
       const data = await api<SalesListResponse>(`/sales?${params.toString()}`, { refresh: true });
       setRows(Array.isArray(data.sales) ? data.sales : []);
     } catch (cause) {
+      setRows([]);
       setError(cause instanceof Error ? cause.message : "Unable to load transactions.");
     } finally {
       setLoading(false);
     }
-  }, [storeId, paymentMethod, startDate, endDate, categoryId, page]);
+  }, [storeId, paymentMethod, startDate, endDate, categoryId]);
 
   useEffect(() => {
     void Promise.resolve().then(() => load());
@@ -116,6 +122,41 @@ export default function TransactionsPage() {
       (sale.client_transaction_id ?? "").toLowerCase().includes(term),
     );
   }, [rows, query]);
+
+  const pageCount = Math.max(1, Math.ceil(visibleRows.length / LIMIT));
+  const paginatedRows = visibleRows.slice((page - 1) * LIMIT, page * LIMIT);
+  const filteredTotals = useMemo(() => visibleRows.reduce(
+    (totals, sale) => ({
+      sales: totals.sales + Number(sale.total_amount || 0),
+      paid: totals.paid + Number(sale.amount_paid || 0),
+      balance: totals.balance + Number(sale.balance || 0),
+    }),
+    { sales: 0, paid: 0, balance: 0 },
+  ), [visibleRows]);
+
+  const activeFilters = useMemo(() => {
+    const filters: { key: string; label: string }[] = [];
+    if (query.trim()) filters.push({ key: "search", label: "Search: " + query.trim() });
+    if (startDate) filters.push({ key: "start", label: "From: " + startDate });
+    if (endDate) filters.push({ key: "end", label: "To: " + endDate });
+    if (categoryId) {
+      filters.push({
+        key: "category",
+        label: "Category: " + (categories.find((category) => String(category.id) === categoryId)?.name ?? "Selected category"),
+      });
+    }
+    if (paymentMethod) filters.push({ key: "payment", label: "Payment: " + paymentMethod });
+    return filters;
+  }, [query, startDate, endDate, categoryId, categories, paymentMethod]);
+
+  function clearFilters() {
+    setQuery("");
+    setStartDate("");
+    setEndDate("");
+    setCategoryId("");
+    setPaymentMethod("");
+    setPage(1);
+  }
 
   async function exportTransactions(format: "pdf" | "csv") {
     if (!storeId || exportInProgress.current) return;
@@ -232,6 +273,42 @@ export default function TransactionsPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-white/50">Active filters:</span>
+          {activeFilters.length > 0 ? activeFilters.map((filter) => (
+            <span key={filter.key} className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs text-orange-200">
+              {filter.label}
+            </span>
+          )) : <span className="text-xs text-white/40">None</span>}
+          <button
+            type="button"
+            onClick={clearFilters}
+            disabled={activeFilters.length === 0}
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Clear Filters
+          </button>
+        </div>
+
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-white/45">Matching transactions</p>
+            <p className="mt-1 text-lg font-semibold">{visibleRows.length}</p>
+          </div>
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-white/45">Total sales</p>
+            <p className="mt-1 text-lg font-semibold">{money(filteredTotals.sales)}</p>
+          </div>
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-white/45">Amount paid</p>
+            <p className="mt-1 text-lg font-semibold">{money(filteredTotals.paid)}</p>
+          </div>
+          <div className="rounded-xl border border-white/10 p-3">
+            <p className="text-xs text-white/45">Outstanding balance</p>
+            <p className="mt-1 text-lg font-semibold">{money(filteredTotals.balance)}</p>
+          </div>
+        </div>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => void exportTransactions("pdf")} disabled={exporting !== null || loading} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50">
             {exporting === "pdf" ? "Preparing PDF…" : "Export PDF"}
           </button>
@@ -253,7 +330,7 @@ export default function TransactionsPage() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={7} className="px-3 py-10 text-center text-white/40">Loading transactions…</td></tr>
-              ) : visibleRows.map((sale) => (
+              ) : paginatedRows.map((sale) => (
                 <tr key={sale.id} className="border-t border-white/5">
                   <td className="px-3 py-4">{formatNigeriaDateTime(sale.created_at)}</td>
                   <td className="px-3 py-4">
@@ -290,8 +367,8 @@ export default function TransactionsPage() {
             <span>Page {page}</span>
             <button
               type="button"
-              disabled={visibleRows.length < LIMIT}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= pageCount}
+              onClick={() => setPage((p) => Math.min(p + 1, pageCount))}
               className="px-3 py-1.5 rounded border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
