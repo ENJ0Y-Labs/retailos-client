@@ -358,3 +358,47 @@ body {
     padding-right: 0.5rem;
   }
 }
+
+
+/* C9: keep wide operational tables readable on phones without widening the page. */
+#main-content .overflow-x-auto {
+  width: 100%;
+  min-width: 0;
+}
+
+#main-content .overflow-x-auto > table {
+  width: max-content;
+  min-width: 100%;
+}
+
+#main-content [data-tour="sales-cart"] {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  #main-content [data-tour="sales-cart"] {
+    position: static;
+    padding: 1rem;
+  }
+
+  #main-content [data-tour="transactions-table"],
+  #main-content [data-tour="inventory-table"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #main-content .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  #main-content .overflow-x-auto > table th,
+  #main-content .overflow-x-auto > table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #main-content .overflow-x-auto > table td:has(button) {
+    white-space: nowrap;
+  }
+}
