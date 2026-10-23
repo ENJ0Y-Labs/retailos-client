@@ -918,7 +918,7 @@ export default function SalesPage() {
 
       {!accountReady && <p role={storageReadFailed ? "alert" : "status"} className="mb-5 text-sm text-white/50">{storageReadFailed ? "Checkout is disabled because saved browser data could not be read. Do not clear browser storage; recover the saved data before continuing." : "Restoring checkout data for the signed-in account…"}</p>}
 
-      {accountReady && <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+      {accountReady && <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         <section className="rounded-2xl border border-white/10 bg-[#151515] p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-semibold">Products and services</h2>
@@ -987,7 +987,7 @@ export default function SalesPage() {
           )}
         </section>
 
-        <aside data-tour="sales-cart" className="h-fit rounded-2xl border border-white/10 bg-[#151515] p-5 lg:sticky lg:top-20">
+        <aside data-tour="sales-cart" className="min-w-0 h-fit rounded-2xl border border-white/10 bg-[#151515] p-5 lg:sticky lg:top-20">
           <h2 className="text-lg font-semibold">Checkout</h2>
 
           <div className="mt-5 space-y-3">
