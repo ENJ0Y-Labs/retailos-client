@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import DashboardShell from "@/components/layout/DashboardShell";
@@ -47,7 +48,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleStoreSave(event: React.FormEvent<HTMLFormElement>) {
+  async function handleStoreSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (savingStore || storeSubmitLock.current) return;
 
@@ -91,7 +92,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function handlePasswordChange(event: React.FormEvent<HTMLFormElement>) {
+  async function handlePasswordChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (changingPassword || passwordSubmitLock.current) return;
 
