@@ -93,6 +93,7 @@ export default function TransactionsPage() {
       const data = await api<SalesListResponse>(`/sales?${params.toString()}`, { refresh: true });
       setRows(Array.isArray(data.sales) ? data.sales : []);
     } catch (cause) {
+      setRows([]);
       setError(cause instanceof Error ? cause.message : "Unable to load transactions.");
     } finally {
       setLoading(false);
