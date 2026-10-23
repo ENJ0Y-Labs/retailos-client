@@ -117,43 +117,47 @@ export default function SalesPage() {
   }, []);
 
   useEffect(() => {
-    if (!accountStorageKey) {
-      setHydratedKey(null);
-      setCart([]);
-      setPendingSales([]);
-      setCustomerId("");
-      setPaid("");
-      setTransactionId("");
-      return;
-    }
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      if (!accountStorageKey) {
+        setHydratedKey(null);
+        setCart([]);
+        setPendingSales([]);
+        setCustomerId("");
+        setPaid("");
+        setTransactionId("");
+        return;
+      }
 
-    setHydratedKey(null);
-    setStorageReadFailed(false);
-    try {
-      const raw = localStorage.getItem(accountStorageKey);
-      const saved = raw ? JSON.parse(raw) as Partial<OfflineSnapshot> : {};
-      setCart(Array.isArray(saved.cart) ? saved.cart : []);
-      setCustomerId(typeof saved.customerId === "string" ? saved.customerId : "");
-      setPaid(typeof saved.paid === "string" ? saved.paid : "");
-      setPaymentMethod(typeof saved.paymentMethod === "string" ? saved.paymentMethod : "CASH");
-      setTransactionId(typeof saved.transactionId === "string" ? saved.transactionId : "");
-      setPendingSales(Array.isArray(saved.pendingSales)
-        ? saved.pendingSales.map((sale) => ({
-            ...sale,
-            status: sale.status === "syncing" ? "pending" : sale.status,
-          }))
-        : []);
-      setStorageWarning("");
-    } catch {
-      setStorageReadFailed(true);
-      setStorageWarning("RetailOS could not read saved checkout data. Do not clear browser storage or close this tab until you have recovered the saved data.");
-      setCart([]);
-      setPendingSales([]);
-      setCustomerId("");
-      setPaid("");
-      setTransactionId("");
-    }
-    setHydratedKey(accountStorageKey);
+      setStorageReadFailed(false);
+      try {
+        const raw = localStorage.getItem(accountStorageKey);
+        const saved = raw ? JSON.parse(raw) as Partial<OfflineSnapshot> : {};
+        setCart(Array.isArray(saved.cart) ? saved.cart : []);
+        setCustomerId(typeof saved.customerId === "string" ? saved.customerId : "");
+        setPaid(typeof saved.paid === "string" ? saved.paid : "");
+        setPaymentMethod(typeof saved.paymentMethod === "string" ? saved.paymentMethod : "CASH");
+        setTransactionId(typeof saved.transactionId === "string" ? saved.transactionId : "");
+        setPendingSales(Array.isArray(saved.pendingSales)
+          ? saved.pendingSales.map((sale) => ({
+              ...sale,
+              status: sale.status === "syncing" ? "pending" : sale.status,
+            }))
+          : []);
+        setStorageWarning("");
+      } catch {
+        setStorageReadFailed(true);
+        setStorageWarning("RetailOS could not read saved checkout data. Do not clear browser storage or close this tab until you have recovered the saved data.");
+        setCart([]);
+        setPendingSales([]);
+        setCustomerId("");
+        setPaid("");
+        setTransactionId("");
+      }
+      setHydratedKey(accountStorageKey);
+    });
+    return () => { cancelled = true; };
   }, [accountStorageKey]);
 
   useEffect(() => {
@@ -161,7 +165,6 @@ export default function SalesPage() {
     try {
       const snapshot: OfflineSnapshot = { cart, customerId, paid, paymentMethod, transactionId, pendingSales };
       localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
-      setStorageWarning("");
     } catch {
       setStorageWarning("Browser storage is unavailable or full. Checkout data may be lost on refresh. Do not queue an offline sale until storage works again.");
     }
@@ -764,7 +767,7 @@ export default function SalesPage() {
             {isOnline ? "ONLINE" : "OFFLINE"}
           </span>
         </div>
-        <p className="mt-3 text-xs text-white/50">Checkout data is saved in this browser for this signed-in account and store. Clearing browser data, using private browsing, or losing access to this device can destroy unsynchronized sales. Keep this device's browser storage intact until every sale is confirmed.</p>
+        <p className="mt-3 text-xs text-white/50">Checkout data is saved in this browser for this signed-in account and store. Clearing browser data, using private browsing, or losing access to this device can destroy unsynchronized sales. Keep this device&apos;s browser storage intact until every sale is confirmed.</p>
         {storageWarning && <p role="alert" className="mt-3 text-sm text-amber-200">{storageWarning}</p>}
       </section>
 
