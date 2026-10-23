@@ -149,8 +149,10 @@ export default function TransactionsPage() {
       sales: totals.sales + Number(sale.total_amount || 0),
       paid: totals.paid + Number(sale.amount_paid || 0),
       balance: totals.balance + Number(sale.balance || 0),
+      refunded: totals.refunded + Number(sale.refunded_amount || 0),
+      net: totals.net + Number(sale.net_amount ?? sale.total_amount ?? 0),
     }),
-    { sales: 0, paid: 0, balance: 0 },
+    { sales: 0, paid: 0, balance: 0, refunded: 0, net: 0 },
   ), [visibleRows]);
 
   const activeFilters = useMemo(() => {
@@ -274,7 +276,7 @@ export default function TransactionsPage() {
     if (!refundRequestRef.current || refundRequestRef.current.signature !== signature) refundRequestRef.current = { signature, id: "REFUND-" + crypto.randomUUID() };
     setRefundSubmitting(true); setRefundError(""); setError(""); setRefundSuccessMessage("");
     try {
-      const data = await api<{ refund: RefundRecord }>("/sales/refunds", { method: "POST", body: JSON.stringify({ store_id: storeId, sale_id: selectedSale.id, amount: amount.toFixed(2), reason: refundReason.trim(), payment_method: refundPaymentMethod, client_transaction_id: refundRequestRef.current.id }), refresh: true });
+      const data = await api<{ refund: RefundRecord }>("/sales/refunds", { method: "POST", body: JSON.stringify({ store_id: storeId, sale_id: selectedSale.id, amount: amount.toFixed(2), reason: refundReason.trim(), payment_method: refundPaymentMethod, client_transaction_id: refundRequestRef.current!.id }), refresh: true });
       setRefundReceipt(data.refund.receipt); setShowRefundForm(false); setRefundSuccessMessage("Refund " + data.refund.reference + " recorded successfully."); refundRequestRef.current = null;
       setSelectedSale({ ...selectedSale, refunded_amount: Number(selectedSale.refunded_amount || 0) + Number(data.refund.amount), net_amount: Number(selectedSale.total_amount) - Number(selectedSale.refunded_amount || 0) - Number(data.refund.amount) });
       await load(); await showDetails(selectedSale.id);
@@ -342,7 +344,7 @@ export default function TransactionsPage() {
           </button>
         </div>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <div className="rounded-xl border border-white/10 p-3">
             <p className="text-xs text-white/45">Matching transactions</p>
             <p className="mt-1 text-lg font-semibold">{visibleRows.length}</p>
@@ -359,6 +361,8 @@ export default function TransactionsPage() {
             <p className="text-xs text-white/45">Outstanding balance</p>
             <p className="mt-1 text-lg font-semibold">{money(filteredTotals.balance)}</p>
           </div>
+          <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-white/45">Refunded</p><p className="mt-1 text-lg font-semibold">{money(filteredTotals.refunded)}</p></div>
+          <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-white/45">Net sales</p><p className="mt-1 text-lg font-semibold">{money(filteredTotals.net)}</p></div>
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
