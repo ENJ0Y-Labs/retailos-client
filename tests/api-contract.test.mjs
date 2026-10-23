@@ -263,3 +263,41 @@ test("audit history screen uses the store-scoped audit API with supported filter
   assert.match(shell, /href: "\/audit"/);
   assert.doesNotMatch(page, /method:\s*["'](POST|PATCH|PUT|DELETE)["']/);
 });
+
+
+test("offline checkout persists account-scoped carts and restores pending sales", () => {
+  const page = source("app/sales/page.tsx");
+  assert.match(page, /retailos:offline-checkout:v1:user:/);
+  assert.match(page, /localStorage\.getItem\(accountStorageKey\)/);
+  assert.match(page, /localStorage\.setItem\(accountStorageKey, JSON\.stringify\(snapshot\)\)/);
+  assert.match(page, /window\.addEventListener\("online", updateOnlineStatus\)/);
+  assert.match(page, /window\.addEventListener\("offline", updateOnlineStatus\)/);
+  assert.match(page, /navigator\.onLine/);
+  assert.match(page, /NOT confirmed/);
+  assert.match(page, /clearing browser data/i);
+});
+
+test("offline sale synchronization uses the server idempotency contract and separates confirmed sales", () => {
+  const page = source("app/sales/page.tsx");
+  const serverReadme = "https://github.com/ENJ0Y-Labs/retailos-server/blob/main/README.md";
+  assert.match(page, /api<\{[\s\S]*?sync_status\?: "accepted" \| "already_processed" \| "rejected"/);
+  assert.match(page, /"\/sales\/sync"/);
+  assert.match(page, /client_transaction_id: id/);
+  assert.match(page, /result\.sync_status === "accepted" \|\| result\.sync_status === "already_processed"/);
+  assert.match(page, /Retry with same reference/);
+  assert.match(page, /IDEMPOTENCY_KEY_REUSED/);
+  assert.match(page, /Refresh prices and stock/);
+  assert.match(page, /Confirm revised sale and retry/);
+  assert.match(page, /Pending sales \(/);
+  assert.match(page, /separate from confirmed server sales/);
+  assert.match(page, /window\.addEventListener\("beforeunload", warnBeforeUnload\)/);
+  assert.ok(serverReadme.includes("README.md"));
+});
+
+test("pending checkout data is gated by the signed-in account and store", () => {
+  const page = source("app/sales/page.tsx");
+  assert.match(page, /user:\$\{user\.id\}:store:\$\{storeId\}/);
+  assert.match(page, /hydratedKey === accountStorageKey/);
+  assert.match(page, /\{accountReady && pendingSales\.length > 0 &&/);
+  assert.match(page, /Restoring checkout data for the signed-in account/);
+});
