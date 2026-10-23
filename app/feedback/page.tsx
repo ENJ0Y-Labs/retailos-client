@@ -54,6 +54,7 @@ export default function FeedbackPage() {
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState<FeedbackPayload | null>(null);
   const submissionId = useRef("");
+  const submitLock = useRef(false);
 
   function getSubmissionId() {
     if (!submissionId.current) submissionId.current = createSubmissionId();
@@ -61,6 +62,8 @@ export default function FeedbackPage() {
   }
 
   async function send(payload: FeedbackPayload) {
+    if (submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
     setError("");
     setSuccess("");
@@ -90,13 +93,14 @@ export default function FeedbackPage() {
         setAttempt(payload);
       }
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || attempt) return;
+    if (submitting || submitLock.current || attempt) return;
 
     const trimmedMessage = message.trim();
     const trimmedName = contactName.trim();
