@@ -8,6 +8,13 @@ import { api } from "@/lib/api";
 import type { Category, InventoryMovement, Product, ProductType } from "@/lib/types";
 import CsvImport from "@/components/inventory/CsvImport";
 
+function displayUnit(unit: string): string {
+  if (unit === "piece") return "Pieces";
+  if (unit === "kg") return "kg";
+  if (unit === "bag") return "Bags";
+  return unit;
+}
+
 export default function InventoryPage() {
   const { user } = useAuth();
   const storeId = user?.store_id ?? null;
@@ -267,15 +274,15 @@ export default function InventoryPage() {
       const source = receivingForm.source.trim();
       const reason = [
         "Stock received",
-        `Unit cost: ₦${unitCost.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per ${product.base_unit}`,
-        `Unit: ${product.base_unit}`,
+        `Unit cost: ₦${unitCost.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per ${displayUnit(product.base_unit)}`,
+        `Unit: ${displayUnit(product.base_unit)}`,
         `Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         `Received on: ${receivingForm.receivedAt}`,
         source ? `Supplier/source: ${source}` : "",
       ].filter(Boolean).join(" | ");
       await api("/product/adjust", { method: "POST", json: { store_id: id, id: product.id, quantity_change: quantity, reason } });
       setReceivingForm({ productId: "", quantity: "", unitCost: "", receivedAt: new Date().toISOString().slice(0, 10), source: "" });
-      setMessage(`Received ${quantity} ${product.base_unit} of ${product.name}. Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
+      setMessage(`Received ${quantity} ${displayUnit(product.base_unit)} of ${product.name}. Total receiving cost: ₦${receivingTotal.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`);
       await Promise.all([loadProducts(), loadMovements()]);
     } catch (e) {
       setMessage("");
@@ -433,19 +440,19 @@ export default function InventoryPage() {
               <tr key={product.id} className="border-t border-white/5">
                 <td className="px-3 py-4">{product.name}</td>
                 <td className="px-3 py-4">{product.product_type}</td>
-                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : product.base_unit}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : displayUnit(product.base_unit)}</td>
                 <td className="px-3 py-4">
                   {product.product_type === "Service" ? <span className="text-white/30">Not applicable</span> : <div className="space-y-1">
                     {(product.units ?? []).map((unit) => (
                       <p key={unit.id} className="whitespace-nowrap text-xs text-white/60">
-                        {unit.name}: {Number.isFinite(Number(unit.base_quantity)) && Number(unit.base_quantity) > 0 ? `${unit.base_quantity} ${product.base_unit}` : "Conversion unavailable"} · ₦{Number(unit.price).toLocaleString("en-NG")}
+                        {unit.name}: {Number.isFinite(Number(unit.base_quantity)) && Number(unit.base_quantity) > 0 ? `${unit.base_quantity} ${displayUnit(product.base_unit)}` : "Conversion unavailable"} · ₦{Number(unit.price).toLocaleString("en-NG")}
                       </p>
                     ))}
                     {!product.units?.length && <span className="text-white/30">No units configured</span>}
                   </div>}
                 </td>
                 <td className="px-3 py-4">₦{Number(product.price).toLocaleString()}</td>
-                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : `${product.stock_quantity} ${product.base_unit}`}</td>
+                <td className="px-3 py-4">{product.product_type === "Service" ? "—" : `${product.stock_quantity} ${displayUnit(product.base_unit)}`}</td>
                 <td className="px-3 py-4">{product.product_type === "Service" ? "—" : product.low_stock_threshold ?? "—"}</td>
                 <td className="px-3 py-4"><div className="flex flex-wrap gap-2">
                   <button disabled={pendingAction !== null} onClick={() => adjust(product, 1)} className="rounded bg-white/10 px-2 py-1 text-xs disabled:opacity-40">{pendingAction === "adjust-" + product.id ? "Updating..." : "+1"}</button>
@@ -472,7 +479,7 @@ export default function InventoryPage() {
       <section className="mt-6 rounded-2xl border border-white/10 bg-[#151515] p-5">
         <div><h2 className="font-semibold">Stock receiving history</h2><p className="mt-1 text-xs text-white/35">Previous receiving entries are shown from the server&apos;s inventory movement history.</p></div>
         <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-white/40"><tr><th className="px-3 py-3">RECORDED</th><th className="px-3 py-3">PRODUCT ID</th><th className="px-3 py-3">QUANTITY ADDED</th><th className="px-3 py-3">RECEIVING DETAILS</th></tr></thead><tbody>
-          {receivingMovements.map((movement) => <tr key={movement.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(movement.created_at)}</td><td className="px-3 py-3">#{movement.product_id}</td><td className="px-3 py-3">+{movement.quantity_change} {movement.reason?.match(/(?:^| \| )Unit: ([^|]+)/)?.[1]?.trim() || "unit not recorded"}</td><td className="px-3 py-3">{movement.reason}</td></tr>)}
+          {receivingMovements.map((movement) => <tr key={movement.id} className="border-t border-white/5"><td className="px-3 py-3">{formatNigeriaDateTime(movement.created_at)}</td><td className="px-3 py-3">#{movement.product_id}</td><td className="px-3 py-3">+{movement.quantity_change} {movement.reason?.match(/(?:^| \| )Unit: ([^|]+)/)?.[1]?.trim() ? displayUnit(movement.reason.match(/(?:^| \| )Unit: ([^|]+)/)?.[1]?.trim() ?? "") : "unit not recorded"}</td><td className="px-3 py-3">{movement.reason}</td></tr>)}
           {!receivingMovements.length && <tr><td colSpan={4} className="px-3 py-10 text-center text-white/30">No stock receiving records yet.</td></tr>}
         </tbody></table></div>
       </section>
