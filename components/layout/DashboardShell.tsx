@@ -113,7 +113,7 @@ export default function DashboardShell({ children, title }: DashboardShellProps)
       </nav>
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/10 bg-[#0b0b0b]/95 px-4 py-3 backdrop-blur sm:px-8">
+        <header className="sticky top-0 z-30 flex min-w-0 items-center gap-2 border-b border-white/10 bg-[#0b0b0b]/95 px-3 py-3 backdrop-blur sm:gap-3 sm:px-8">
           <button
             ref={menuButtonRef}
             type="button"
