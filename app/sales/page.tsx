@@ -99,6 +99,7 @@ export default function SalesPage() {
   const [pendingSales, setPendingSales] = useState<PendingSale[]>([]);
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState("");
+  const [storageReadFailed, setStorageReadFailed] = useState(false);
   const syncingIds = useRef(new Set<string>());
 
   const checkoutLock = useRef(false);
@@ -127,6 +128,7 @@ export default function SalesPage() {
     }
 
     setHydratedKey(null);
+    setStorageReadFailed(false);
     try {
       const raw = localStorage.getItem(accountStorageKey);
       const saved = raw ? JSON.parse(raw) as Partial<OfflineSnapshot> : {};
@@ -143,7 +145,8 @@ export default function SalesPage() {
         : []);
       setStorageWarning("");
     } catch {
-      setStorageWarning("RetailOS could not read saved checkout data. Do not clear browser storage or close this tab until you have copied any visible pending sale details.");
+      setStorageReadFailed(true);
+      setStorageWarning("RetailOS could not read saved checkout data. Do not clear browser storage or close this tab until you have recovered the saved data.");
       setCart([]);
       setPendingSales([]);
       setCustomerId("");
@@ -154,7 +157,7 @@ export default function SalesPage() {
   }, [accountStorageKey]);
 
   useEffect(() => {
-    if (!accountStorageKey || hydratedKey !== accountStorageKey) return;
+    if (!accountStorageKey || hydratedKey !== accountStorageKey || storageReadFailed) return;
     try {
       const snapshot: OfflineSnapshot = { cart, customerId, paid, paymentMethod, transactionId, pendingSales };
       localStorage.setItem(accountStorageKey, JSON.stringify(snapshot));
@@ -162,7 +165,7 @@ export default function SalesPage() {
     } catch {
       setStorageWarning("Browser storage is unavailable or full. Checkout data may be lost on refresh. Do not queue an offline sale until storage works again.");
     }
-  }, [accountStorageKey, hydratedKey, cart, customerId, paid, paymentMethod, transactionId, pendingSales]);
+  }, [accountStorageKey, hydratedKey, storageReadFailed, cart, customerId, paid, paymentMethod, transactionId, pendingSales]);
 
   useEffect(() => {
     if (!accountReady) return;
@@ -283,7 +286,7 @@ export default function SalesPage() {
   }
 
   function savePendingSale(payload: OfflineSalePayload, saleTotal: number, customerLabel: string): boolean {
-    if (!accountStorageKey || !accountReady) {
+    if (!accountStorageKey || !accountReady || storageReadFailed) {
       setError("Checkout data is still being restored for this account. Wait a moment and try again.");
       return false;
     }
@@ -343,6 +346,14 @@ export default function SalesPage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not refresh current prices and stock.");
     }
+  }
+
+  function updatePendingAmountPaid(saleId: string, amount: number) {
+    if (!Number.isFinite(amount) || amount < 0) return;
+    setPendingSales((current) => current.map((sale) => sale.id !== saleId ? sale : {
+      ...sale,
+      payload: { ...sale.payload, amount_paid: amount },
+    }));
   }
 
   function updatePendingQuantity(saleId: string, productId: number, unitId: number, quantity: number) {
@@ -802,6 +813,12 @@ export default function SalesPage() {
                     );
                   })}
                 </div>
+                {sale.status === "conflict" && sale.catalog && (
+                  <label className="mt-3 block max-w-xs text-xs text-white/60">
+                    Amount paid
+                    <input type="number" min="0" step="0.01" value={sale.payload.amount_paid} onChange={(event) => updatePendingAmountPaid(sale.id, Number(event.target.value))} className="field mt-1 w-full" />
+                  </label>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {(sale.status === "pending" || (sale.status === "failed" && sale.retryable)) && (
                     <button type="button" disabled={!isOnline || sale.status === "syncing"} onClick={() => void syncPendingSale(sale)} className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-40">Retry with same reference</button>
