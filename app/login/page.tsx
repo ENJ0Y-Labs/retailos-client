@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener("popstate", callback);
+  return () => window.removeEventListener("popstate", callback);
+}
+
+function getLoginReason() {
+  return new URLSearchParams(window.location.search).get("reason") || "";
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,16 +20,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [reason, setReason] = useState("");
+  const reason = useSyncExternalStore(subscribeToLocation, getLoginReason, () => "");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const currentReason = new URLSearchParams(window.location.search).get("reason") || "";
-    setReason(currentReason);
-    if (currentReason === "session-expired") {
-      setError("Your session expired. Sign in again to continue.");
-    }
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,6 +46,12 @@ export default function LoginPage() {
           <h1 className="text-3xl font-semibold">Sign in</h1>
           <p className="mt-2 text-sm text-white/55">Use the account stored by the RetailOS server.</p>
         </div>
+
+        {reason === "session-expired" && (
+          <p role="alert" className="mb-5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            Your session expired. Sign in again to continue.
+          </p>
+        )}
 
         {reason === "password-changed" && (
           <p role="status" className="mb-5 rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-2 text-sm text-green-300">
