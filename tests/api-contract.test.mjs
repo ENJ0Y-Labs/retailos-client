@@ -237,3 +237,29 @@ test("transaction refund workflow uses the authoritative server contract and rec
   assert.match(page, /printRefundReceipt/);
   assert.match(page, /await load\(\); await showDetails\(selectedSale\.id\)/);
 });
+
+
+test("audit history screen uses the store-scoped audit API with supported filters", () => {
+  const page = source("app/audit/page.tsx");
+  const shell = source("components/layout/DashboardShell.tsx");
+  assert.match(page, /api<AuditResponse>\("\/audit\?/);
+  assert.match(page, /params\.set\("start_date", startDate\)/);
+  assert.match(page, /params\.set\("end_date", endDate\)/);
+  assert.match(page, /params\.set\("action_type", actionType\.trim\(\)\)/);
+  assert.match(page, /params\.set\("user_id", userId\.trim\(\)\)/);
+  assert.match(page, /entry\.action_type/);
+  assert.match(page, /entry\.user_id/);
+  assert.match(page, /entry\.created_at/);
+  assert.match(page, /entry\.entity_type/);
+  assert.match(page, /entry\.entity_id/);
+  assert.match(page, /entry\.before/);
+  assert.match(page, /entry\.after/);
+  assert.match(page, /entry\.details/);
+  assert.match(page, /SENSITIVE_KEY/);
+  assert.match(page, /Start date must be on or before end date/);
+  assert.match(page, /No audit records found/);
+  assert.match(page, /Loading audit history/);
+  assert.match(page, /role="alert"/);
+  assert.match(shell, /href: "\/audit"/);
+  assert.doesNotMatch(page, /method:\s*["'](POST|PATCH|PUT|DELETE)["']/);
+});
