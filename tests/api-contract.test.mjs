@@ -232,6 +232,8 @@ test("transaction refund workflow uses the authoritative server contract and rec
   assert.match(page, /refundReceipt\.amount/);
   assert.match(page, /refundReceipt\.created_at/);
   assert.match(page, /refundReceipt\.payment_method/);
+  assert.match(page, /filteredTotals\.refunded/);
+  assert.match(page, /filteredTotals\.net/);
   assert.match(page, /printRefundReceipt/);
   assert.match(page, /await load\(\); await showDetails\(selectedSale\.id\)/);
 });
