@@ -85,7 +85,7 @@ export default function LiveDashboard() {
         }
       } catch (err: unknown) {
         // Preserve the last good brief during a background refresh failure.
-        if (!cancelled && !brief) {
+        if (!cancelled) {
           setBriefError(err instanceof Error ? err.message : "Unable to refresh the daily business brief.");
         }
       }
