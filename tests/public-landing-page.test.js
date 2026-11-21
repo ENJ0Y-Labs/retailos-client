@@ -29,7 +29,7 @@ test("public landing page displays server-backed Free and Pro pricing and limits
   assert.match(pricingSection, /Sales per month/);
   assert.match(pricingSection, /staff accounts/i);
   assert.match(pricingSection, /NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER/);
-    assert.match(pricingSection, /wa\\.me/);
+    assert.match(pricingSection, /wa\.me/);
   assert.match(pricingSection, /Continue on WhatsApp/);
   assert.match(pricingSection, /activated only after payment is verified/i);
   assert.match(pricingSection, /role="status"/);
