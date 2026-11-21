@@ -95,6 +95,7 @@ export default function LandingPricingSection() {
   const proPlan = plans.find((plan) => plan.id === "pro");
   const proPrice = proPlan?.billing_options.find((option) => option.interval === interval)
     ?? proPlan?.price;
+  const plansSignInHref = `/login?next=${encodeURIComponent(`/plans?interval=${interval}`)}`;
 
   return (
     <section id="pricing" className="border-y border-white/10 bg-white/[0.02]">
@@ -216,7 +217,7 @@ export default function LandingPricingSection() {
                     {isPro ? (
                       <div className="mt-7 space-y-3">
                         <Link
-                          href="/login?next=%2Fplans"
+                          href={plansSignInHref}
                           className="inline-flex w-full items-center justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
                         >
                           Sign in to request Pro
