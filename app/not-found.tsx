@@ -1,4 +1,4 @@
-"import Link from "next/link";
+import Link from "next/link";
 import BrandMark from "@/components/brand/BrandMark";
 
 export default function NotFound() {
