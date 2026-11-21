@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { api, ApiError } from "@/lib/api";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import BrandMark from "@/components/brand/BrandMark";
 
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener("popstate", callback);
+  return () => window.removeEventListener("popstate", callback);
+}
+
+function getNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next") || "/dashboard";
+  return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+}
+
 export default function RegisterPage() {
   const router = useRouter();
+  const nextPath = useSyncExternalStore(subscribeToLocation, getNextPath, () => "/dashboard");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +45,7 @@ export default function RegisterPage() {
         method: "POST",
         json: { username, email, password },
       });
-      router.push("/login");
+      router.push(`/login?next=${encodeURIComponent(nextPath)}`);
     } catch (err) {
       if (err instanceof ApiError && err.fields) setFieldErrors(err.fields);
       setError(err instanceof Error ? err.message : "Unable to create account");

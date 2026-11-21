@@ -45,5 +45,7 @@ test("public pricing reuses the server catalog and clearly discloses current rel
   assert.match(pricing, /advanced-reporting access controls/);
   assert.match(pricing, /dedicated export authorization/);
   assert.match(pricing, /staff-account management/);
-  assert.match(pricing, /payment is independently verified/);
+  assert.match(pricing, /A Pro request is only recorded as pending/);
+  assert.match(pricing, /does not collect payment or activate paid access/);
+  assert.doesNotMatch(pricing, /wa\.me|Continue on WhatsApp/);
 });

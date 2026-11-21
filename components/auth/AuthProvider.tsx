@@ -69,13 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       if (error instanceof ApiError && error.status === 401) {
         setAuthError("");
-        router.replace("/login");
+        router.replace(`/login?next=${encodeURIComponent(pathname || "/dashboard")}`);
       } else {
         setAuthError(getAuthFailureMessage(error));
       }
       return null;
     }
-  }, [router]);
+  }, [pathname, router]);
 
   const retrySession = useCallback(() => {
     setLoading(true);

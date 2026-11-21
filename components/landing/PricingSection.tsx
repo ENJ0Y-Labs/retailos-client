@@ -95,7 +95,7 @@ export default function LandingPricingSection() {
   const proPlan = plans.find((plan) => plan.id === "pro");
   const proPrice = proPlan?.billing_options.find((option) => option.interval === interval)
     ?? proPlan?.price;
-  const whatsappNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
+  const plansSignInHref = `/login?next=${encodeURIComponent(`/plans?interval=${interval}`)}`;
 
   return (
     <section id="pricing" className="border-y border-white/10 bg-white/[0.02]">
@@ -174,7 +174,7 @@ export default function LandingPricingSection() {
                     </p>
                     {isPro && (
                       <p className="mt-2 text-xs leading-5 text-white/45">
-                        Quarterly and yearly options are available. Contact us on WhatsApp for bank transfer instructions. Pro is activated only after payment is verified.
+                        Choose your billing interval after signing in. A request records your selection but does not collect payment or activate Pro.
                       </p>
                     )}
 
@@ -215,20 +215,23 @@ export default function LandingPricingSection() {
                     {plan.fair_use && <p className="mt-2 text-xs leading-5 text-white/45">{plan.fair_use}</p>}
 
                     {isPro ? (
-                      whatsappNumber ? (
-                        <a
-                          href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello TX RetailOS team, I want to subscribe to RetailOS Pro. Billing interval: ${billingLabel(interval)}. Price: ${money(proPrice?.amount ?? 0, proPrice?.currency ?? "NGN")}. My RetailOS account email: [enter email]. Store name: [enter store name]. Please send me the bank transfer details. I will share my transfer receipt here after payment. I understand Pro will be activated only after you verify the payment.`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
+                      <div className="mt-7 space-y-3">
+                        <Link
+                          href={plansSignInHref}
+                          className="inline-flex w-full items-center justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
                         >
-                          Continue on WhatsApp
-                        </a>
-                      ) : (
-                        <p className="mt-7 rounded-xl border border-white/10 px-5 py-3 text-center text-sm text-white/50">
-                          WhatsApp upgrade contact is not configured yet.
+                          Sign in to request Pro
+                        </Link>
+                        <Link
+                          href={plansSignInHref}
+                          className="block text-center text-sm font-medium text-orange-300 hover:text-orange-200"
+                        >
+                          Eligible stores can start a {freePlan.trial?.duration_days ?? 14}-day Pro trial
+                        </Link>
+                        <p className="text-center text-xs leading-5 text-white/45">
+                          The server grants one 14-day trial per eligible store. Starting it requires sign-in. A Pro request is only recorded as pending and does not collect payment or activate paid access.
                         </p>
-                      )
+                      </div>
                     ) : (
                       <Link
                         href="/register"
@@ -244,10 +247,10 @@ export default function LandingPricingSection() {
             <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-4 text-sm leading-6 text-white/65">
               <h3 className="font-semibold text-white">Current release limitations</h3>
               <p className="mt-2">
-                Prices, limits, trial terms, and plan entitlements above come directly from the server catalog. Some Pro capabilities are not yet fully available or enforced in the current release, including advanced-reporting access controls, dedicated export authorization, and staff-account management. Priority WhatsApp support also depends on the support channel being configured and staffed. Confirm availability with RetailOS before paying for Pro.
+                Prices, limits, trial terms, and plan entitlements above come directly from the server catalog. Some Pro capabilities are not yet fully available or enforced in the current release, including advanced-reporting access controls, dedicated export authorization, and staff-account management. Confirm feature availability with RetailOS before requesting a paid plan.
               </p>
               <p className="mt-2 text-xs text-white/45">
-                Unlimited usage is subject to fair-use review at exceptionally high volumes. A pending upgrade request is not activation; Pro access begins only after payment is independently verified.
+                Unlimited usage is subject to fair-use review at exceptionally high volumes. A Pro request remains pending until the server confirms a separately verified activation. No payment is collected on this page.
               </p>
             </div>
           </>

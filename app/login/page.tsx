@@ -16,6 +16,11 @@ function getLoginReason() {
   return new URLSearchParams(window.location.search).get("reason") || "";
 }
 
+function getNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next") || "/dashboard";
+  return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -23,6 +28,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const reason = useSyncExternalStore(subscribeToLocation, getLoginReason, () => "");
+  const nextPath = useSyncExternalStore(subscribeToLocation, getNextPath, () => "/dashboard");
   const [error, setError] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -31,7 +37,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await api("/auth/login", { method: "POST", json: { email, password } });
-      router.push("/dashboard");
+      router.push(nextPath);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in");
@@ -85,7 +91,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-white/40">
-          New to RetailOS? <Link href="/register" className="text-orange-400 hover:text-orange-300">Create an account</Link>
+          New to RetailOS? <Link href={`/register?next=${encodeURIComponent(nextPath)}`} className="text-orange-400 hover:text-orange-300">Create an account</Link>
         </p>
       </section>
     </main>

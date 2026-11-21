@@ -93,11 +93,15 @@ Examples:
 - `POST /alerts/generate-low-stock?store_id=...`
 - `POST /alerts/resolve?store_id=...&id=...`
 
-## Premium upgrades (interim manual payment)
+## Pro plan requests and trial
 
-Online checkout is not configured yet. Pro upgrade buttons open the official RetailOS WhatsApp Business account with the selected billing interval, price, and store/account details prefilled. Support sends the business bank-transfer instructions in that conversation. Customers send their receipt through WhatsApp; the operator must independently verify the transfer in the business bank account before the Super Admin activates Pro for the selected store.
+The public pricing page lets visitors start a free account and directs existing users to sign in before managing Pro options. The authenticated Plans page uses the Flask subscription endpoints:
 
-Configure `NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER` in the Client deployment using the official business number in international format with digits only (for example, `2348012345678`). Do not include a plus sign, spaces, or punctuation. The repository leaves this setting blank intentionally. Until configured, the Pro upgrade CTA remains unavailable rather than linking to a fake number.
+- `POST /subscriptions/trial` starts the server-authorized one-time 14-day Pro trial for an eligible store.
+- `POST /subscriptions/change` records a selected Pro plan and billing interval as a pending request. It returns a pending state; it does not collect payment or activate paid Pro.
+- The current subscription remains authoritative until the server confirms a separate activation. A pending request must never be displayed as a completed upgrade.
+
+Online checkout is not configured. The client must not simulate payment success or set subscription entitlements. A separately verified manual activation may be performed by an authorized super administrator under the server's audited platform-admin workflow.
 
 ## Production API and session cookies
 

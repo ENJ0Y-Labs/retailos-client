@@ -93,7 +93,6 @@ export default function PlansPage() {
   const [action, setAction] = useState<"trial" | "change" | "cancel" | null>(null);
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
-  const premiumWhatsAppNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
 
   const load = useCallback(async () => {
     if (!user?.store_id) {
@@ -121,6 +120,13 @@ export default function PlansPage() {
   }, [user]);
 
   useEffect(() => {
+    const requestedInterval = new URLSearchParams(window.location.search).get("interval");
+    if (requestedInterval === "month" || requestedInterval === "quarter" || requestedInterval === "year") {
+      setBillingInterval(requestedInterval);
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       await Promise.resolve();
@@ -146,8 +152,8 @@ export default function PlansPage() {
       await load();
       setNotice(
         result.change?.activation === "not_activated"
-          ? `Your request to change to ${plan.name} is pending. The server has not activated this plan. Contact support on WhatsApp to complete manual payment verification.`
-          : "The plan-change request was recorded. The current plan remains authoritative until the server confirms a change.",
+          ? `Your request to change to ${plan.name} is pending. The server has not activated this plan. No payment was collected, and your current plan remains active.`
+          : "The server recorded your plan-change request. Your current plan remains active until a separate server-confirmed activation.",
       );
     } catch (error) {
       setActionError(messageFor(error, "The plan-change request failed. Your current plan has not been changed by this screen."));
@@ -358,32 +364,14 @@ export default function PlansPage() {
                       {plan.fair_use && <p className="mt-3 text-xs text-white/45">{plan.fair_use}</p>}
 
                       <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-                        {plan.id === "pro" ? (
-                          premiumWhatsAppNumber ? (
-                            <a
-                              href={`https://wa.me/${premiumWhatsAppNumber}?text=${encodeURIComponent(`Hello TX RetailOS team, I want to upgrade my store to Pro. Store: ${user?.store_id ? `#${user.store_id}` : ""}. Account email: ${user?.email ?? "[enter email]"}. Billing interval: ${billingInterval}. Price: ${money(plan.billing_options.find((option) => option.interval === billingInterval)?.amount ?? plan.price.amount, plan.price.currency)}. Please send me the bank transfer details. I will send the receipt here after payment. I understand Pro will be activated after you verify that the payment reached your account.`)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-disabled={isCurrent}
-                              className={`flex-1 rounded-lg bg-orange-500 px-4 py-3 text-center text-sm font-semibold text-black transition hover:bg-orange-400 ${isCurrent ? "pointer-events-none opacity-50" : ""}`}
-                            >
-                              {isCurrent ? "Current plan" : "Continue on WhatsApp"}
-                            </a>
-                          ) : (
-                            <button type="button" disabled className="flex-1 rounded-lg bg-orange-500 px-4 py-3 text-sm font-semibold text-black opacity-50">
-                              WhatsApp contact not configured
-                            </button>
-                          )
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => void requestChange(plan)}
-                            disabled={Boolean(action) || isCurrent || Boolean(subscription?.pending_change)}
-                            className="flex-1 rounded-lg bg-orange-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {action === "change" && !isCurrent ? "Submitting request…" : isCurrent ? "Current plan" : "Request Free plan"}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => void requestChange(plan)}
+                          disabled={Boolean(action) || isCurrent || Boolean(subscription?.pending_change)}
+                          className="flex-1 rounded-lg bg-orange-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {action === "change" ? "Submitting request…" : isCurrent ? "Current plan" : plan.id === "pro" ? "Request Pro plan change" : "Request Free plan"}
+                        </button>
                         {plan.id === "free" && trialAvailable && (
                           <button
                             type="button"
@@ -397,7 +385,17 @@ export default function PlansPage() {
                       </div>
                       {plan.id === "pro" && (
                         <p className="mt-3 text-xs leading-5 text-white/45">
-                          WhatsApp will provide the bank transfer instructions. Send your receipt there and include your account email. Pro is activated only after the payment is independently verified.
+                          Submitting this request does not start a checkout, collect payment, or activate Pro. Paid access remains unavailable until the server confirms a separately verified activation.
+                        </p>
+                      )}
+                      {plan.id === "free" && subscription?.trial_used && (
+                        <p role="status" className="mt-4 text-sm text-white/55">
+                          This store has already used its one-time Pro trial. Another trial cannot be started.
+                        </p>
+                      )}
+                      {plan.id === "free" && subscription?.pending_change && (
+                        <p role="status" className="mt-4 text-sm text-amber-200/80">
+                          A plan-change request is already pending. Resolve it before starting a trial or requesting another plan.
                         </p>
                       )}
                     </article>
