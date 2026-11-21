@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const authProvider = await readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8");
 const landingPage = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+const publicHeader = await readFile(new URL("../components/landing/PublicHeader.tsx", import.meta.url), "utf8");
 const pricingSection = await readFile(new URL("../components/landing/PricingSection.tsx", import.meta.url), "utf8");
 
 test("root landing page is public and does not require session verification", () => {
@@ -14,8 +15,9 @@ test("root landing page is public and does not require session verification", ()
 test("landing page communicates the product value and provides auth entry points", () => {
   assert.match(landingPage, /Run your shop with/);
   assert.match(landingPage, /organize products, track stock, record sales/);
-  assert.match(landingPage, /href="\/register"/);
-  assert.match(landingPage, /href="\/login"/);
+  assert.match(publicHeader, /href="\/register"/);
+  assert.match(publicHeader, /href="\/login"/);
+  assert.match(publicHeader, /href="\/pricing"/);
   assert.match(landingPage, /LandingPricingSection/);
   assert.doesNotMatch(landingPage, /Public plan prices are not published/i);
 });
