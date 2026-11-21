@@ -95,6 +95,7 @@ export default function LandingPricingSection() {
   const proPlan = plans.find((plan) => plan.id === "pro");
   const proPrice = proPlan?.billing_options.find((option) => option.interval === interval)
     ?? proPlan?.price;
+  const whatsappNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
 
   return (
     <section id="pricing" className="border-y border-white/10 bg-white/[0.02]">
@@ -173,7 +174,7 @@ export default function LandingPricingSection() {
                     </p>
                     {isPro && (
                       <p className="mt-2 text-xs leading-5 text-white/45">
-                        Quarterly and yearly options are available. Paid billing is not yet configured, so selecting Pro does not activate a paid subscription.
+                        Quarterly and yearly options are available. Contact us on WhatsApp for bank transfer instructions. Pro is activated only after payment is verified.
                       </p>
                     )}
 
@@ -213,12 +214,29 @@ export default function LandingPricingSection() {
                     )}
                     {plan.fair_use && <p className="mt-2 text-xs leading-5 text-white/45">{plan.fair_use}</p>}
 
-                    <Link
-                      href="/register"
-                      className={`mt-7 inline-flex w-full items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition ${isPro ? "bg-orange-500 text-black hover:bg-orange-400" : "border border-white/15 text-white hover:bg-white/5"}`}
-                    >
-                      {isPro ? "Get started with Pro" : "Start for free"}
-                    </Link>
+                    {isPro ? (
+                      whatsappNumber ? (
+                        <a
+                          href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hello TX RetailOS team, I want to subscribe to RetailOS Pro. Billing interval: ${billingLabel(interval)}. Price: ${money(proPrice?.amount ?? 0, proPrice?.currency ?? "NGN")}. My RetailOS account email: [enter email]. Store name: [enter store name]. Please send me the bank transfer details. I will share my transfer receipt here after payment. I understand Pro will be activated only after you verify the payment.`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
+                        >
+                          Continue on WhatsApp
+                        </a>
+                      ) : (
+                        <p className="mt-7 rounded-xl border border-white/10 px-5 py-3 text-center text-sm text-white/50">
+                          WhatsApp upgrade contact is not configured yet.
+                        </p>
+                      )
+                    ) : (
+                      <Link
+                        href="/register"
+                        className="mt-7 inline-flex w-full items-center justify-center rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5"
+                      >
+                        Start for free
+                      </Link>
+                    )}
                   </article>
                 );
               })}
