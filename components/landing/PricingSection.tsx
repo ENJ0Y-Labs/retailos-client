@@ -95,7 +95,7 @@ export default function LandingPricingSection() {
   const proPlan = plans.find((plan) => plan.id === "pro");
   const proPrice = proPlan?.billing_options.find((option) => option.interval === interval)
     ?? proPlan?.price;
-  const whatsappNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\\D/g, "") ?? "";
+  const whatsappNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
 
   return (
     <section id="pricing" className="border-y border-white/10 bg-white/[0.02]">
