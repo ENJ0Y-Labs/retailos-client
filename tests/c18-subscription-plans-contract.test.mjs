@@ -32,10 +32,11 @@ test("plan requests are not represented as paid activation or purchase success",
   const page = read("../app/plans/page.tsx");
 
   assert.match(page, /activation === "not_activated"/);
-  assert.match(page, /NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER/);
-    assert.match(page, /wa\.me/);
-  assert.match(page, /Continue on WhatsApp/);
-  assert.match(page, /independently verified/);
+  assert.match(page, /requestChange\(plan\)/);
+  assert.match(page, /Request Pro plan change/);
+  assert.match(page, /does not start a checkout, collect payment, or activate Pro/);
+  assert.match(page, /subscription\?\.trial_used/);
+  assert.match(page, /already used its one-time Pro trial/);
   assert.match(page, /current plan remains authoritative/i);
   assert.match(page, /\/subscriptions\/change\/cancel/);
 });
