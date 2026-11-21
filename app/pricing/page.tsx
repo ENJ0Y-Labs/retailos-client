@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     locale: "en_NG",
     type: "website",
   },
-};
+} as Metadata;
 
 export default function PricingPage() {
   return (
