@@ -11,7 +11,7 @@ test("root metadata describes RetailOS and configures Open Graph and Twitter car
   assert.match(source, /siteName/);
   assert.match(source, /twitter:/);
   assert.match(source, /card:\s*"summary_large_image"/);
-  assert.match(source, /title: "TX RetailOS \| Retail and Stock Management"/);
+  assert.match(source, /title: "TX RetailOS \\| Retail and Stock Management"/);
 });
 
 test("public auth routes have distinct titles and are excluded from indexing", async () => {
@@ -38,7 +38,7 @@ test("main application routes have distinct titles and are excluded from indexin
 
 test("branding assets are registered and used across public and authenticated entry points", async () => {
   const layout = await read("../app/layout.tsx");
-  const landing = await read("../app/page.tsx");
+  const publicHeader = await read("../components/landing/PublicHeader.tsx");
   const login = await read("../app/login/page.tsx");
   const register = await read("../app/register/page.tsx");
   const shell = await read("../components/layout/DashboardShell.tsx");
@@ -52,7 +52,7 @@ test("branding assets are registered and used across public and authenticated en
   assert.ok(brand.includes('/brand/logo-light.svg'));
   assert.ok(brand.includes('/brand/logo-dark.svg'));
   assert.ok(css.includes('html[data-theme="light"] .brand-mark-dark'));
-  for (const source of [landing, login, register, shell]) {
+  for (const source of [publicHeader, login, register, shell]) {
     assert.ok(source.includes("BrandMark"));
   }
 });
