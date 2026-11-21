@@ -120,6 +120,13 @@ export default function PlansPage() {
   }, [user]);
 
   useEffect(() => {
+    const requestedInterval = new URLSearchParams(window.location.search).get("interval");
+    if (requestedInterval === "month" || requestedInterval === "quarter" || requestedInterval === "year") {
+      setBillingInterval(requestedInterval);
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       await Promise.resolve();
