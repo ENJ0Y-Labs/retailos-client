@@ -174,7 +174,7 @@ export default function LandingPricingSection() {
                     </p>
                     {isPro && (
                       <p className="mt-2 text-xs leading-5 text-white/45">
-                        Quarterly and yearly options are available. Contact us on WhatsApp for bank transfer instructions. Pro is activated only after payment is verified.
+                        Choose your billing interval after signing in. A request records your selection but does not collect payment or activate Pro.
                       </p>
                     )}
 
@@ -223,13 +223,13 @@ export default function LandingPricingSection() {
                           Sign in to request Pro
                         </Link>
                         <Link
-                          href="/login?next=%2Fplans"
+                          href={plansSignInHref}
                           className="block text-center text-sm font-medium text-orange-300 hover:text-orange-200"
                         >
                           Eligible stores can start a {freePlan.trial?.duration_days ?? 14}-day Pro trial
                         </Link>
                         <p className="text-center text-xs leading-5 text-white/45">
-                          A Pro request is only recorded as pending. It does not collect payment or activate paid access.
+                          The server grants one 14-day trial per eligible store. Starting it requires sign-in. A Pro request is only recorded as pending and does not collect payment or activate paid access.
                         </p>
                       </div>
                     ) : (
