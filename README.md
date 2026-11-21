@@ -93,6 +93,12 @@ Examples:
 - `POST /alerts/generate-low-stock?store_id=...`
 - `POST /alerts/resolve?store_id=...&id=...`
 
+## Premium upgrades (interim manual payment)
+
+Online checkout is not configured yet. Pro upgrade buttons open the official RetailOS WhatsApp Business account with the selected billing interval, price, and store/account details prefilled. Support sends the business bank-transfer instructions in that conversation. Customers send their receipt through WhatsApp; the operator must independently verify the transfer in the business bank account before the Super Admin activates Pro for the selected store.
+
+Configure `NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER` in the Client deployment using the official business number in international format with digits only (for example, `2348012345678`). Do not include a plus sign, spaces, or punctuation. The repository leaves this setting blank intentionally. Until configured, the Pro upgrade CTA remains unavailable rather than linking to a fake number.
+
 ## Production API and session cookies
 
 Set `RETAILOS_API_ORIGIN` to the upstream Flask origin in `.env.local` for development and in the Vercel runtime environment for production. For example, local development can use `http://127.0.0.1:5000` and production can use the deployed HTTPS API origin. Browser requests always use `/api`; do not set `NEXT_PUBLIC_API_URL`. The rewrite keeps the browser request on the frontend origin. A protected API `401` redirects to `/login?reason=session-expired`, where the user sees an explanation. Server/network failures during initial session verification show a retry screen rather than silently treating the user as logged out.
