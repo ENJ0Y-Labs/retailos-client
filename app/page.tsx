@@ -1,5 +1,5 @@
 import Link from "next/link";
-import BrandMark from "@/components/brand/BrandMark";
+import PublicHeader from "@/components/landing/PublicHeader";
 import LandingPricingSection from "@/components/landing/PricingSection";
 
 const features = [
@@ -23,20 +23,7 @@ const features = [
 export default function Home() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#0b0b0b] text-white">
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 sm:px-10">
-        <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tight" aria-label="TX RetailOS home">
-          <BrandMark size={40} />
-          TX <span className="text-orange-500">RetailOS</span>
-        </Link>
-        <nav aria-label="Main navigation" className="flex items-center gap-3">
-          <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-white/75 transition hover:text-white">
-            Sign in
-          </Link>
-          <Link href="/register" className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-orange-400">
-            Create account
-          </Link>
-        </nav>
-      </header>
+      <PublicHeader />
 
       <section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-20 pt-16 sm:px-10 md:grid-cols-[1.15fr_0.85fr] md:pb-28 md:pt-24">
         <div>

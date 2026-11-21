@@ -25,7 +25,7 @@ const LIMIT_LABELS: Record<string, string> = {
   products: "Products",
   customers: "Customers",
   sales_per_month: "Sales per month",
-  staff_accounts: "Additional staff accounts",
+  staff_accounts: "Staff accounts",
 };
 
 const FEATURE_ROWS: Array<{ label: string; group: "features" | "reporting"; key: string }> = [
@@ -191,7 +191,7 @@ export default function LandingPricingSection() {
                     </div>
 
                     <div className="mt-6 border-t border-white/10 pt-5">
-                      <h4 className="text-sm font-semibold">Included features</h4>
+                      <h4 className="text-sm font-semibold">Plan features</h4>
                       <ul className="mt-3 space-y-3">
                         {FEATURE_ROWS.map((feature) => {
                           const included = Boolean(plan[feature.group]?.[feature.key]);
@@ -241,9 +241,15 @@ export default function LandingPricingSection() {
                 );
               })}
             </div>
-            <p className="mt-5 text-xs leading-5 text-white/40">
-              Unlimited usage is subject to fair-use review at exceptionally high volumes. Plan features reflect the current published catalog; availability may depend on the current release.
-            </p>
+            <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-4 text-sm leading-6 text-white/65">
+              <h3 className="font-semibold text-white">Current release limitations</h3>
+              <p className="mt-2">
+                Prices, limits, trial terms, and plan entitlements above come directly from the server catalog. Some Pro capabilities are not yet fully available or enforced in the current release, including advanced-reporting access controls, dedicated export authorization, and staff-account management. Priority WhatsApp support also depends on the support channel being configured and staffed. Confirm availability with RetailOS before paying for Pro.
+              </p>
+              <p className="mt-2 text-xs text-white/45">
+                Unlimited usage is subject to fair-use review at exceptionally high volumes. A pending upgrade request is not activation; Pro access begins only after payment is independently verified.
+              </p>
+            </div>
           </>
         )}
       </div>
