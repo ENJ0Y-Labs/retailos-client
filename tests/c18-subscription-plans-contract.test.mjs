@@ -37,7 +37,7 @@ test("plan requests are not represented as paid activation or purchase success",
   assert.match(page, /does not start a checkout, collect payment, or activate Pro/);
   assert.match(page, /subscription\?\.trial_used/);
   assert.match(page, /already used its one-time Pro trial/);
-  assert.match(page, /current plan remains authoritative/i);
+  assert.match(page, /current plan remains active/i);
   assert.match(page, /\/subscriptions\/change\/cancel/);
 });
 
