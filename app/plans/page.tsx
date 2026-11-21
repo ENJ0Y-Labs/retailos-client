@@ -93,7 +93,7 @@ export default function PlansPage() {
   const [action, setAction] = useState<"trial" | "change" | "cancel" | null>(null);
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
-  const premiumWhatsAppNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\\D/g, "") ?? "";
+  const premiumWhatsAppNumber = process.env.NEXT_PUBLIC_PREMIUM_SUPPORT_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
 
   const load = useCallback(async () => {
     if (!user?.store_id) {
